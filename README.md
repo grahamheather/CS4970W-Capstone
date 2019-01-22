@@ -3,7 +3,11 @@
 ## Mason Flint, Benjamin Meyer, and Heather Graham
 
 ## Set-up
-``` pip install pytest ```
+``` pip install pytest pyaudio ```
+
+## For development
+Run the following command from the root directory.
+``` pip install -e . ```
 
 ## Testing
 ``` pytest ```
