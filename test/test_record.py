@@ -176,7 +176,7 @@ def test_multivoice(mock_stream):
 
 # test separating multiple voices from background noise
 @pytest.mark.parametrize('mock_stream', [path.join(get_test_recording_dir(), 'hello+como_noise.wav')], indirect=['mock_stream'])
-def test_multivoice(mock_stream):
+def test_multivoice_noise(mock_stream):
 	record.record()
 	assert len(os.listdir(get_recording_dir())) == 1
 	recording = read_wav(path.join(get_recording_dir(), os.listdir(get_recording_dir())[0]))
