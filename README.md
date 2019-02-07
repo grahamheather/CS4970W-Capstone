@@ -3,7 +3,11 @@
 ## Mason Flint, Benjamin Meyer, and Heather Graham
 
 ## Set-up
-``` pip install pytest pyaudio ```
+```
+pip install pytest pyaudio numpy sklearn matplotlib eyed3 pydub hmmlearn
+git clone https://github.com/tyiannak/pyAudioAnalysis.git
+pip install -e pyAudioAnalysis
+```
 
 ## For development
 Run the following command from the root directory.
