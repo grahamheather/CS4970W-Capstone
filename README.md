@@ -5,7 +5,7 @@
 ## Set-up
 ```
 pip install pytest pyaudio numpy sklearn matplotlib eyed3 pydub hmmlearn
-git clone https://github.com/tyiannak/pyAudioAnalysis.git
+git clone https://github.com/grahamheather/pyAudioAnalysis.git
 pip install -e pyAudioAnalysis
 ```
 
