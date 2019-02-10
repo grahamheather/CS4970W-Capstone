@@ -5,6 +5,7 @@ import pyaudio
 import wave
 from os import path
 import os
+from queue import Queue
 
 # file under test
 from CAT import record
@@ -75,8 +76,13 @@ def test_open_stream():
 def test_save_to_file():
 	wave_file = wave.open(path.join(get_test_recording_dir(), 'hello.wav'), 'r')
 	audio_buffer = [wave_file.readframes(record.FRAME_SIZE) for i in range( int(wave_file.getnframes() / record.FRAME_SIZE + .5) ) ]
-	record.save_to_file(audio_buffer)
+	file_queue = Queue()
+	record.save_to_file(audio_buffer, file_queue)
+
+	assert file_queue.qsize() == 1
+	filename = file_queue.get()
 	assert len(os.listdir(get_recording_dir())) == 1
+	assert os.listdir(get_recording_dir())[0] == filename
 
 	saved_file = read_wav(path.join(get_recording_dir(), os.listdir(get_recording_dir())[0]))
 	wave_file.rewind()
@@ -87,20 +93,20 @@ def test_save_to_file():
 # test that feeding only silence will not save a file
 @pytest.mark.parametrize('mock_stream', [path.join(get_test_recording_dir(), 'silence.wav')], indirect=['mock_stream'])
 def test_silence(mock_stream):
-	record.record()
+	record.record(Queue())
 	assert os.listdir(get_recording_dir()) == []
 
 # test that speech less than the min sample length will not save a file
 @pytest.mark.parametrize('mock_stream', [path.join(get_test_recording_dir(), 'hello.wav')], indirect=['mock_stream'])
 def test_short(mock_stream):
-	record.record()
+	record.record(Queue())
 	assert os.listdir(get_recording_dir()) == []
 
 # test that speech less than min sample length will not save a file but future speech will save a file
 # (check file length and contents)
 @pytest.mark.parametrize('mock_stream', [path.join(get_test_recording_dir(), 'hello+how.wav')], indirect=['mock_stream'])
 def test_short_long(mock_stream):
-	record.record()
+	record.record(Queue())
 	assert len(os.listdir(get_recording_dir())) == 1
 	recording = read_wav(path.join(get_recording_dir(), os.listdir(get_recording_dir())[0]))
 	original = read_wav(path.join(get_test_recording_dir(), 'hello+how.wav'))
@@ -112,7 +118,7 @@ def test_short_long(mock_stream):
 # (check file length and contents)
 @pytest.mark.parametrize('mock_stream', [path.join(get_test_recording_dir(), 'ground.wav')], indirect=['mock_stream'])
 def test_normal(mock_stream):
-	record.record()
+	record.record(Queue())
 	assert len(os.listdir(get_recording_dir())) == 1
 	recording = read_wav(path.join(get_recording_dir(), os.listdir(get_recording_dir())[0]))
 	original = read_wav(path.join(get_test_recording_dir(), 'ground.wav'))
@@ -124,7 +130,7 @@ def test_normal(mock_stream):
 # (check file length and contents)
 @pytest.mark.parametrize('mock_stream', [path.join(get_test_recording_dir(), 'tale.wav')], indirect=['mock_stream'])
 def test_too_long(mock_stream):
-	record.record()
+	record.record(Queue())
 	files = sorted(os.listdir(get_recording_dir()))
 	assert len(files) == 2
 	recording1 = read_wav(path.join(get_recording_dir(), files[0]))
@@ -139,7 +145,7 @@ def test_too_long(mock_stream):
 # (check file length and contents)
 @pytest.mark.parametrize('mock_stream', [path.join(get_test_recording_dir(), 'star.wav')], indirect=['mock_stream'])
 def test_pauses(mock_stream):
-	record.record()
+	record.record(Queue())
 	files = sorted(os.listdir(get_recording_dir()))
 	assert len(files) == 2 # the first section of speech is below the length threshold
 	recording2 = read_wav(path.join(get_recording_dir(), files[0]))
@@ -155,7 +161,7 @@ def test_pauses(mock_stream):
 # test distinguishing speech from background noise
 @pytest.mark.parametrize('mock_stream', [path.join(get_test_recording_dir(), 'noise.wav')], indirect=['mock_stream'])
 def test_noise(mock_stream):
-	record.record()
+	record.record(Queue())
 	assert len(os.listdir(get_recording_dir())) == 1
 	recording = read_wav(path.join(get_recording_dir(), os.listdir(get_recording_dir())[0]))
 	original = read_wav(path.join(get_test_recording_dir(), 'noise.wav'))
@@ -166,7 +172,7 @@ def test_noise(mock_stream):
 # test separating multiple voices from silence
 @pytest.mark.parametrize('mock_stream', [path.join(get_test_recording_dir(), 'hello+como.wav')], indirect=['mock_stream'])
 def test_multivoice(mock_stream):
-	record.record()
+	record.record(Queue())
 	assert len(os.listdir(get_recording_dir())) == 1
 	recording = read_wav(path.join(get_recording_dir(), os.listdir(get_recording_dir())[0]))
 	original = read_wav(path.join(get_test_recording_dir(), 'hello+como.wav'))
@@ -177,7 +183,7 @@ def test_multivoice(mock_stream):
 # test separating multiple voices from background noise
 @pytest.mark.parametrize('mock_stream', [path.join(get_test_recording_dir(), 'hello+como_noise.wav')], indirect=['mock_stream'])
 def test_multivoice_noise(mock_stream):
-	record.record()
+	record.record(Queue())
 	assert len(os.listdir(get_recording_dir())) == 1
 	recording = read_wav(path.join(get_recording_dir(), os.listdir(get_recording_dir())[0]))
 	original = read_wav(path.join(get_test_recording_dir(), 'hello+como_noise.wav'))

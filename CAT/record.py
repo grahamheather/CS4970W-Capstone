@@ -2,12 +2,22 @@ import collections
 import datetime
 from os import path
 
+from queue import Queue
+# multiprocessing avoids Python's Global Interpreter Lock which
+# prevents more than one thread running at a time.
+# This allows the program to, ideally, take advantage of multiple
+# cores on the Raspberry Pi.
+from multiprocessing import Process
+
 import pyaudio
 import wave
 import webrtcvad
 
 # universal constants
 MILLISECONDS_PER_SECOND = 1000
+
+# hardware specs
+NUM_CORES = 4
 
 # audio recording settings
 VAD_LEVEL = 2 # "integer between 0 and 3. 0 is the least aggressive about filtering out non-speech, 3 is the most aggressive." -py-webrtcvad docs
@@ -50,13 +60,15 @@ def open_stream():
 	return stream
 
 
-def save_to_file(audio_buffer):
+def save_to_file(audio_buffer, file_queue):
 	''' Saves an audio buffer to a file
 
 		Parameters:
 			audio_buffer
 				the audio buffer to save to the file
 				type: list of byte strings
+			file_queue
+				queue to add the new filename to
 	'''
 
 	# CHECK IF THERE IS ENOUGH SPACE REMAINING
@@ -65,17 +77,27 @@ def save_to_file(audio_buffer):
 	# join segments of audio into a single byte string
 	data = b''.join(segment for segment in audio_buffer)
 
+	filename = "audio{}.wav".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S%f"))
+
 	# save file with unique name indicating date and time
-	wave_file = wave.open(path.join("CAT", "recordings", "audio{}.wav".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S%f"))), 'wb')
+	wave_file = wave.open(path.join("CAT", "recordings", filename), 'wb')
 	wave_file.setnchannels(CHANNELS)
 	wave_file.setsampwidth(NUM_BYTES)
 	wave_file.setframerate(RATE)
 	wave_file.writeframes(data)
 	wave_file.close()
 
+	# add the new file to the processing queue
+	file_queue.put(filename)
 
-def record():
-	''' Records and saves detected speech, discarding silence '''
+
+def record(file_queue):
+	''' Records and saves detected speech, discarding silence 
+	
+		Parameters:
+			file_queue
+				queue to add filenames of recordings to
+	'''
 
 	# set up
 	stream = open_stream()
@@ -94,12 +116,10 @@ def record():
 			current_read_frames = PERIODIC_SAMPLE_FRAMES
 
 		if vad.is_speech(audio[-FRAME_BYTES:], RATE): # if speech has been detected
-			# TAKE LOCK
-
 			last_speech = 0 # update that speech has been detected
 			audio_buffer.append(audio) # add speech
 			if len(audio_buffer) > MAX_SAMPLE_FRAMES: # if speech buffer is getting long
-				save_to_file(audio_buffer) # save incomplete speech sequence to file
+				save_to_file(audio_buffer, file_queue) # save incomplete speech sequence to file
 				audio_buffer = [] # and clear buffer
 		elif not last_speech == None: # otherwise if still possibily in a sequence of speech
 			last_speech += 1 # update how long it has been since last speech
@@ -108,14 +128,52 @@ def record():
 			if last_speech > MAX_SILENCE_FRAMES: # if the pause is long enough to indicate an end to speech
 				if len(audio_buffer) - last_speech > MIN_SAMPLE_FRAMES: # only save if the detected speech is long enough
 					audio_buffer = audio_buffer[:-last_speech] # only save speech until last detected speech (discard silence)
-					save_to_file(audio_buffer) 
+					save_to_file(audio_buffer, file_queue) 
 
 				# reset to no speech recently detected
 				audio_buffer = []
 				last_speech = None
 
-				# RELEASE LOCK
+
+def analyze_audio(file_queue):
+	''' Analyzes files of audio extracting and processing speech
+
+		Parameters:
+			file_queue
+				queue to get filenames from
+	'''
+
+	# analysis processes process files indefinitely
+	while True:
+
+		# block until a file is available in the queue
+		filename = file_queue.get()
+		# process here
+
+	# for speaker diarization
+	# from pyAudioAnalysis import audioSegmentation as d
+	# x = d.speakerDiarization(filename, 0, lda_dim=0)
+	# WINDOW_STEP = .2 SECONDS
+	# NUM_WINDOWS = NUM_FRAMES / [ (FRAMES / SECOND) * WINDOW_STEP]
+	# LENGTH_OF_WINDOW_IN_FRAMES = (FRAMES / SECOND) * WINDOW_STEP
+
+
+def start_processes():
+	''' Starts all process of the program '''
+
+	file_queue = Queue() # thread-safe FIFO queue
+
+	# ideally of the cores should run the recording process
+	# and the other cores will run the analysis processes
+	recording_process = Process(target=record, args=(file_queue,))
+	recording_process.start()
+	analysis_processes = [Process(target=analyze_audio, args=(file_queue,)) for _ in range(NUM_CORES - 1)]
+	for process in analysis_processes:
+		process.start()
+
+	# block until the recording process exits (never, unless error)
+	recording_process.join()
 
 
 if __name__ == '__main__':
-	record()
+	start_processes()
