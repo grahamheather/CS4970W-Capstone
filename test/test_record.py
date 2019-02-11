@@ -82,7 +82,7 @@ def test_save_to_file():
 	assert file_queue.qsize() == 1
 	filename = file_queue.get()
 	assert len(os.listdir(get_recording_dir())) == 1
-	assert os.listdir(get_recording_dir())[0] == filename
+	assert os.path.join(get_recording_dir(), os.listdir(get_recording_dir())[0]) == filename
 
 	saved_file = read_wav(path.join(get_recording_dir(), os.listdir(get_recording_dir())[0]))
 	wave_file.rewind()

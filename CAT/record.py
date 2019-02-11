@@ -1,6 +1,6 @@
 import collections
 import datetime
-from os import path
+import os
 
 from queue import Queue
 # multiprocessing avoids Python's Global Interpreter Lock which
@@ -77,10 +77,10 @@ def save_to_file(audio_buffer, file_queue):
 	# join segments of audio into a single byte string
 	data = b''.join(segment for segment in audio_buffer)
 
-	filename = "audio{}.wav".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S%f"))
+	filename = os.path.join("CAT", "recordings", "audio{}.wav".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S%f")))
 
 	# save file with unique name indicating date and time
-	wave_file = wave.open(path.join("CAT", "recordings", filename), 'wb')
+	wave_file = wave.open(filename, 'wb')
 	wave_file.setnchannels(CHANNELS)
 	wave_file.setsampwidth(NUM_BYTES)
 	wave_file.setframerate(RATE)
@@ -135,7 +135,7 @@ def record(file_queue):
 				last_speech = None
 
 
-def analyze_audio(file_queue):
+def analyze_audio_files(file_queue):
 	''' Analyzes files of audio extracting and processing speech
 
 		Parameters:
@@ -148,7 +148,25 @@ def analyze_audio(file_queue):
 
 		# block until a file is available in the queue
 		filename = file_queue.get()
-		# process here
+		
+		# process the file
+		analyze_audio_file(filename)
+
+		# delete the file
+		os.remove(filename)
+
+
+
+def analyze_audio_file(filename):
+	''' Analyzes the file of audio, extracting and processing speech
+
+		Parameters:
+			filename
+				string, the name of the file to analyze
+	'''
+
+	print("PROCESSING THE FILE: {}".format(filename))
+	# filler until the function is implemented
 
 	# for speaker diarization
 	# from pyAudioAnalysis import audioSegmentation as d
@@ -167,7 +185,7 @@ def start_processes():
 	# and the other cores will run the analysis processes
 	recording_process = Process(target=record, args=(file_queue,))
 	recording_process.start()
-	analysis_processes = [Process(target=analyze_audio, args=(file_queue,)) for _ in range(NUM_CORES - 1)]
+	analysis_processes = [Process(target=analyze_audio_files, args=(file_queue,)) for _ in range(NUM_CORES - 1)]
 	for process in analysis_processes:
 		process.start()
 
