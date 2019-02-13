@@ -2,16 +2,19 @@ import collections
 import datetime
 import os
 
-from queue import Queue
+#from queue import Queue
 # multiprocessing avoids Python's Global Interpreter Lock which
 # prevents more than one thread running at a time.
 # This allows the program to, ideally, take advantage of multiple
 # cores on the Raspberry Pi.
-from multiprocessing import Process
+from multiprocessing import Process, Queue
 
 import pyaudio
 import wave
 import webrtcvad
+
+# speaker diarization
+from pyAudioAnalysis import audioSegmentation
 
 # universal constants
 MILLISECONDS_PER_SECOND = 1000
@@ -23,11 +26,11 @@ NUM_CORES = 4
 VAD_LEVEL = 2 # "integer between 0 and 3. 0 is the least aggressive about filtering out non-speech, 3 is the most aggressive." -py-webrtcvad docs
 FORMAT = pyaudio.paInt16 # WebRTC VAD only accepts 16-bit audio
 NUM_BYTES = 2 # 16 bits in format = 2 bytes in format
-CHANNELS = 1 # WebRTC VAD only accepts mono audio
+NUM_CHANNELS = 1 # WebRTC VAD only accepts mono audio
 RATE = 48000 # WebRTC VAD only accepts 8000, 16000, 32000 or 48000 Hz
-FRAME_MS = 30 # WebRTC VAD only accepts frames of 10, 20, or 30 ms
-FRAME_SIZE = int(RATE * FRAME_MS / MILLISECONDS_PER_SECOND)
-FRAME_BYTES = FRAME_SIZE * NUM_BYTES
+VAD_FRAME_MS = 30 # WebRTC VAD only accepts frames of 10, 20, or 30 ms
+VAD_FRAME_SIZE = int(RATE * VAD_FRAME_MS / MILLISECONDS_PER_SECOND)
+VAD_FRAME_BYTES = VAD_FRAME_SIZE * NUM_BYTES * NUM_CHANNELS
 
 # settings based on system timing and situation
 PERIODIC_SAMPLE_RATE = .5  # how often to check when no speech has been detected, in seconds
@@ -36,10 +39,10 @@ MAX_SAMPLE_LENGTH = 30 # largest sample to save (larger ones will be split), in 
 MAX_SILENCE_LENGTH = .5 # largest length of silence to include in a single sample
 
 # calculated from system settings
-PERIODIC_SAMPLE_FRAMES = int(PERIODIC_SAMPLE_RATE * MILLISECONDS_PER_SECOND / FRAME_MS)
-MIN_SAMPLE_FRAMES = int(MIN_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND / FRAME_MS)
-MAX_SAMPLE_FRAMES = int(MAX_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND / FRAME_MS)
-MAX_SILENCE_FRAMES = int(MAX_SILENCE_LENGTH * MILLISECONDS_PER_SECOND / FRAME_MS)
+PERIODIC_SAMPLE_FRAMES = int(PERIODIC_SAMPLE_RATE * MILLISECONDS_PER_SECOND / VAD_FRAME_MS)
+MIN_SAMPLE_FRAMES = int(MIN_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND / VAD_FRAME_MS)
+MAX_SAMPLE_FRAMES = int(MAX_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND / VAD_FRAME_MS)
+MAX_SILENCE_FRAMES = int(MAX_SILENCE_LENGTH * MILLISECONDS_PER_SECOND / VAD_FRAME_MS)
 
 
 def open_stream():
@@ -51,11 +54,11 @@ def open_stream():
 
 	audio_input = pyaudio.PyAudio()
 	stream = audio_input.open(format=FORMAT,
-							  channels=CHANNELS,
+							  channels=NUM_CHANNELS,
 							  rate=RATE,
 							  input=True,
 							  start=False,
-							  frames_per_buffer=FRAME_SIZE)
+							  frames_per_buffer=VAD_FRAME_SIZE)
 	stream.start_stream()
 	return stream
 
@@ -81,7 +84,7 @@ def save_to_file(audio_buffer, file_queue):
 
 	# save file with unique name indicating date and time
 	wave_file = wave.open(filename, 'wb')
-	wave_file.setnchannels(CHANNELS)
+	wave_file.setnchannels(NUM_CHANNELS)
 	wave_file.setsampwidth(NUM_BYTES)
 	wave_file.setframerate(RATE)
 	wave_file.writeframes(data)
@@ -89,6 +92,21 @@ def save_to_file(audio_buffer, file_queue):
 
 	# add the new file to the processing queue
 	file_queue.put(filename)
+
+
+def read_file(filename):
+	''' Reads an audio file and returns a byte string of its contents
+
+		Parameters:
+			filename: str
+		Returns:
+			byte strings
+	'''
+
+	wave_file = wave.open(filename, 'rb')
+	audio = wave_file.readframes(wave_file.getnframes())
+	wave_file.close()
+	return audio
 
 
 def record(file_queue):
@@ -109,13 +127,13 @@ def record(file_queue):
 
 	while not stream.is_stopped(): # record continuously
 		if not last_speech == None: # if there has been recent speech, read a small section to analyze
-			audio = stream.read(FRAME_SIZE)
+			audio = stream.read(VAD_FRAME_SIZE)
 			current_read_frames = 1
 		else: # if there has not been recent speech, only check for speech periodically
-			audio = stream.read(FRAME_SIZE * PERIODIC_SAMPLE_FRAMES)
+			audio = stream.read(VAD_FRAME_SIZE * PERIODIC_SAMPLE_FRAMES)
 			current_read_frames = PERIODIC_SAMPLE_FRAMES
 
-		if vad.is_speech(audio[-FRAME_BYTES:], RATE): # if speech has been detected
+		if vad.is_speech(audio[-VAD_FRAME_BYTES:], RATE): # if speech has been detected
 			last_speech = 0 # update that speech has been detected
 			audio_buffer.append(audio) # add speech
 			if len(audio_buffer) > MAX_SAMPLE_FRAMES: # if speech buffer is getting long
@@ -156,7 +174,6 @@ def analyze_audio_files(file_queue):
 		os.remove(filename)
 
 
-
 def analyze_audio_file(filename):
 	''' Analyzes the file of audio, extracting and processing speech
 
@@ -165,15 +182,33 @@ def analyze_audio_file(filename):
 				string, the name of the file to analyze
 	'''
 
-	print("PROCESSING THE FILE: {}".format(filename))
-	# filler until the function is implemented
+	# LDA is disabled so that all speakers are analyzed in the same space
+	# and all clusters across all speaker identifications are roughly
+	# Gaussian in that space
+	speaker_detected_by_window = audioSegmentation.speakerDiarization(filename, 0, lda_dim=0)
 
-	# for speaker diarization
-	# from pyAudioAnalysis import audioSegmentation as d
-	# x = d.speakerDiarization(filename, 0, lda_dim=0)
-	# WINDOW_STEP = .2 SECONDS
-	# NUM_WINDOWS = NUM_FRAMES / [ (FRAMES / SECOND) * WINDOW_STEP]
-	# LENGTH_OF_WINDOW_IN_FRAMES = (FRAMES / SECOND) * WINDOW_STEP
+	# calculate necessary stats on labelled windows
+	WINDOW_LENGTH = .2 # in seconds
+	LENGTH_OF_WINDOW_IN_FRAMES = int(RATE * WINDOW_LENGTH)
+	LENGTH_OF_WINDOW_IN_BYTES = LENGTH_OF_WINDOW_IN_FRAMES * NUM_CHANNELS * NUM_BYTES
+
+	# open file
+	audio = read_file(filename)
+
+	# split file into multiple segments based on speaker and sort by speaker
+	segments_by_speaker = collections.defaultdict(list)
+	previous_speaker = None
+	for window_index in range(len(speaker_detected_by_window)):
+		previous_speaker = speaker_detected_by_window[window_index - 1] if window_index > 0 else None
+		speaker = speaker_detected_by_window[window_index]
+		start_frame = LENGTH_OF_WINDOW_IN_BYTES * window_index
+		
+		# floor ceiling or round?
+		window = audio[start_frame:start_frame + LENGTH_OF_WINDOW_IN_BYTES]
+		if speaker == previous_speaker:
+			segments_by_speaker[speaker][-1] += window
+		else:
+			segments_by_speaker[speaker].append(window)
 
 
 def start_processes():
