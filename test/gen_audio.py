@@ -3,11 +3,18 @@
 
 from os import path, remove
 from pydub import AudioSegment
+from pydub.generators import WhiteNoise
 from gtts import gTTS
 from CAT.record import MILLISECONDS_PER_SECOND, RATE, MAX_SAMPLE_LENGTH, MIN_SAMPLE_LENGTH, MAX_SILENCE_LENGTH, VAD_FRAME_MS, PERIODIC_SAMPLE_RATE, NUM_BYTES
 
+BITS_PER_BYTE = 8
+
 MARGIN = 2 * VAD_FRAME_MS # in milliseconds
 LARGER_MARGIN = PERIODIC_SAMPLE_RATE * MILLISECONDS_PER_SECOND
+
+def milliseconds_to_bytes(n):
+	return int(n * NUM_BYTES * RATE / MILLISECONDS_PER_SECOND)
+
 
 def generate_silence(filename):
 	silence = AudioSegment.silent(duration=MAX_SAMPLE_LENGTH*MILLISECONDS_PER_SECOND)
@@ -15,6 +22,7 @@ def generate_silence(filename):
 	silence.export(filename, format="wav")
 
 	return None
+
 
 def generate_short(filename):
 	file_path, file_extension = path.splitext(filename)
@@ -33,6 +41,7 @@ def generate_short(filename):
 	short.export(filename, format="wav")
 
 	return None
+
 
 def generate_short_long(filename):
 	file_path, file_extension = path.splitext(filename)
@@ -58,10 +67,11 @@ def generate_short_long(filename):
 	audio = beginning + long_audio + AudioSegment.silent(duration=MAX_SAMPLE_LENGTH*MILLISECONDS_PER_SECOND).set_frame_rate(RATE)
 	audio.export(filename, format="wav")
 
-	start = len(beginning) * NUM_BYTES * RATE / MILLISECONDS_PER_SECOND
-	end = (len(beginning) + len(long_audio)) * NUM_BYTES * RATE / MILLISECONDS_PER_SECOND
+	start = milliseconds_to_bytes(len(beginning))
+	end = milliseconds_to_bytes(len(beginning) + len(long_audio))
 
-	return (int(start), int(end))
+	return (start, end)
+
 
 def generate_normal(filename):
 	file_path, file_extension = path.splitext(filename)
@@ -82,9 +92,168 @@ def generate_normal(filename):
 	audio.export(filename, format="wav")
 
 	start = 0
-	end = len(speech) * NUM_BYTES * RATE / MILLISECONDS_PER_SECOND
-	return (int(start), int(end))
+	end = milliseconds_to_bytes(len(speech))
+	return (start, end)
 
+
+def generate_too_long(filename):
+	file_path, file_extension = path.splitext(filename)
+
+	# generate text-to-speech
+	file = gTTS("It was the best of times, it was the worst of times, it was the age of wisdom, it was the age of foolishness, it was the epoch of belief, it was the epoch of incredulity, it was the season of Light, it was the season of Darkness, it was the spring of hope, it was the winter of despair, we had everything before us, we had nothing before us, we were all going direct to Heaven, we were all going direct the other way – in short, the period was so far like the present period, that some of its noisiest authorities insisted on its being received, for good or for evil, in the superlative degree of comparison only.")
+	file.save("{}.mp3".format(file_path))
+	speech = AudioSegment.from_mp3("{}.mp3".format(file_path))
+	remove("{}.mp3".format(file_path))
+
+	# fix lengths
+	while len(speech) < MAX_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND + LARGER_MARGIN:
+		speech = speech + speech
+
+	# add silence and save
+	silence = AudioSegment.silent(duration=MAX_SAMPLE_LENGTH*MILLISECONDS_PER_SECOND).set_frame_rate(RATE)
+	audio = speech + silence
+	audio.export(filename, format="wav")
+
+	start = 0
+	end = milliseconds_to_bytes(len(speech))
+	return (start, end)
+
+
+def generate_pauses(filename):
+	file_path, file_extension = path.splitext(filename)
+
+	# generate text-to-speech
+	file1 = gTTS("Do or do not.")
+	file1.save("{}1.mp3".format(file_path))
+	speech1 = AudioSegment.from_mp3("{}1.mp3".format(file_path))
+	remove("{}1.mp3".format(file_path))
+	file2 = gTTS("There is no try.")
+	file2.save("{}2.mp3".format(file_path))
+	speech2 = AudioSegment.from_mp3("{}2.mp3".format(file_path))
+	remove("{}2.mp3".format(file_path))
+	file3 = gTTS("May the force be with you.")
+	file3.save("{}3.mp3".format(file_path))
+	speech3 = AudioSegment.from_mp3("{}3.mp3".format(file_path))
+	remove("{}3.mp3".format(file_path))
+
+	# fix lengths
+	if len(speech1) > MIN_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND - MARGIN:
+		speech1 = speech1[:MIN_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND - MARGIN]
+	while len(speech2) < MIN_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND + LARGER_MARGIN:
+		speech2 = speech2 + speech2
+	while len(speech3) < MIN_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND + LARGER_MARGIN:
+		speech3 = speech3 + speech3
+
+	# add silence and save
+	silence_pre1 = AudioSegment.silent(duration=MAX_SILENCE_LENGTH*MILLISECONDS_PER_SECOND + MARGIN).set_frame_rate(RATE)
+	silence_12 = AudioSegment.silent(duration=MAX_SILENCE_LENGTH*MILLISECONDS_PER_SECOND + MARGIN).set_frame_rate(RATE)
+	silence_23 = AudioSegment.silent(duration=MAX_SILENCE_LENGTH*MILLISECONDS_PER_SECOND + MARGIN).set_frame_rate(RATE)
+	silence_post3 = AudioSegment.silent(duration=MAX_SAMPLE_LENGTH*MILLISECONDS_PER_SECOND).set_frame_rate(RATE)
+	audio = silence_pre1 + speech1 + silence_12 + speech2 + silence_23 + speech3 + silence_post3
+	audio.export(filename, format="wav")
+
+	start2 = milliseconds_to_bytes(len(silence_pre1) + len(speech1) + len(silence_12))
+	end2 = start2 + milliseconds_to_bytes(len(speech2))
+	start3 = end2 + milliseconds_to_bytes(len(silence_23))
+	end3 = start3 + milliseconds_to_bytes(len(speech3))
+
+	return ((start2, end2), (start3, end3))
+
+
+def generate_noise(filename):
+	file_path, file_extension = path.splitext(filename)
+
+	# generate text-to-speech
+	file = gTTS("How are you doing today?")
+	file.save("{}.mp3".format(file_path))
+	speech = AudioSegment.from_mp3("{}.mp3".format(file_path))
+	remove("{}.mp3".format(file_path))
+
+	# fix lengths
+	while len(speech) < MIN_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND + LARGER_MARGIN:
+		speech = speech + speech
+
+	# add silence
+	silence = AudioSegment.silent(duration=MAX_SAMPLE_LENGTH*MILLISECONDS_PER_SECOND + MARGIN).set_frame_rate(RATE)
+	audio = silence + speech + silence
+
+	# add noise
+	noise = WhiteNoise(sample_rate=RATE, bit_depth=NUM_BYTES*BITS_PER_BYTE).to_audio_segment(duration=len(audio))
+	noise = noise - 30
+	audio = audio.overlay(noise)
+
+	# save
+	audio.export(filename, format="wav")
+
+	start = milliseconds_to_bytes(len(silence))
+	end = milliseconds_to_bytes(len(silence) + len(speech))
+
+	return (start, end)
+
+
+def generate_multivoice(filename):
+	file_path, file_extension = path.splitext(filename)
+
+	# generate text-to-speech
+	file1 = gTTS("Hello")
+	file1.save("{}_en.mp3".format(file_path))
+	speech1 = AudioSegment.from_mp3("{}_en.mp3".format(file_path))
+	remove("{}_en.mp3".format(file_path))
+	file2 = gTTS("¿Cómo se va?", lang='es')
+	file2.save("{}_es.mp3".format(file_path))
+	speech2 = AudioSegment.from_mp3("{}_es.mp3".format(file_path))
+	remove("{}_es.mp3".format(file_path))
+	speech = speech1 + speech2
+
+	# fix lengths
+	while len(speech) < MIN_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND + LARGER_MARGIN:
+		speech = speech + speech
+
+	# add silence
+	silence = AudioSegment.silent(duration=MAX_SAMPLE_LENGTH*MILLISECONDS_PER_SECOND + MARGIN).set_frame_rate(RATE)
+	audio = silence + speech + silence
+
+	# add noise
+	noise = WhiteNoise(sample_rate=RATE, bit_depth=NUM_BYTES*BITS_PER_BYTE).to_audio_segment(duration=len(audio))
+	noise = noise - 30
+	audio = audio.overlay(noise)
+
+	# save
+	audio.export(filename, format="wav")
+
+	start = milliseconds_to_bytes(len(silence))
+	end = milliseconds_to_bytes(len(silence) + len(speech))
+
+	return (start, end)
+
+
+def generate_multivoice_noise(filename):
+	file_path, file_extension = path.splitext(filename)
+
+	# generate text-to-speech
+	file1 = gTTS("Hello")
+	file1.save("{}_en.mp3".format(file_path))
+	speech1 = AudioSegment.from_mp3("{}_en.mp3".format(file_path))
+	remove("{}_en.mp3".format(file_path))
+	file2 = gTTS("¿Cómo se va?", lang='es')
+	file2.save("{}_es.mp3".format(file_path))
+	speech2 = AudioSegment.from_mp3("{}_es.mp3".format(file_path))
+	remove("{}_es.mp3".format(file_path))
+	speech = speech1 + speech2
+
+	# fix lengths
+	while len(speech) < MIN_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND + LARGER_MARGIN:
+		speech = speech + speech
+
+	# add silence and save
+	silence = AudioSegment.silent(duration=MAX_SAMPLE_LENGTH*MILLISECONDS_PER_SECOND + MARGIN).set_frame_rate(RATE)
+	audio = silence + speech + silence
+	audio.export(filename, format="wav")
+
+	start = milliseconds_to_bytes(len(silence))
+	end = milliseconds_to_bytes(len(silence) + len(speech))
+
+	return (start, end)
 
 
 def generate_all_audio(folder):
@@ -93,13 +262,10 @@ def generate_all_audio(folder):
 	stats["hello"] = generate_short(path.join(folder, "hello.wav"))
 	stats["hello+how"] = generate_short_long(path.join(folder, "hello+how.wav"))
 	stats["ground"] = generate_normal(path.join(folder, "ground.wav"))
+	stats["tale"] = generate_too_long(path.join(folder, "tale.wav"))
+	stats["star"] = generate_pauses(path.join(folder, "star.wav"))
+	stats["noise"] = generate_noise(path.join(folder, "noise.wav"))
+	stats["multivoice"] = generate_multivoice(path.join(folder, "hello+como.wav"))
+	stats["multivoice_noise"] = generate_multivoice_noise(path.join(folder, "hello+como_noise.wav"))
 
 	return stats
-
-
-
-if __name__ == "__main__":
-	# FIX HARD-CODED FILENAMES
-	#generate_silence("test/test_recordings/silence.wav")
-	#generate_short("test/test_recordings/hello.wav")
-	print("NOT IMPLEMENTED")
