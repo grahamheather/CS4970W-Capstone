@@ -44,6 +44,10 @@ MIN_SAMPLE_FRAMES = int(MIN_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND / VAD_FRAME_
 MAX_SAMPLE_FRAMES = int(MAX_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND / VAD_FRAME_MS)
 MAX_SILENCE_FRAMES = int(MAX_SILENCE_LENGTH * MILLISECONDS_PER_SECOND / VAD_FRAME_MS)
 
+# speaker diarization settings
+SPEAKER_DIARIZATION = True
+MAX_SPEAKERS = 2
+
 
 def open_stream():
 	''' Opens audio recording stream
@@ -174,18 +178,23 @@ def analyze_audio_files(file_queue):
 		os.remove(filename)
 
 
-def analyze_audio_file(filename):
-	''' Analyzes the file of audio, extracting and processing speech
+def split_by_speaker(filename):
+	''' Splits a file of audio into segments identified by speaker
 
 		Parameters:
 			filename
-				string, the name of the file to analyze
+				string, the name of the audio file
+
+		Returns:
+			{
+				speaker_id: list of windows of audio data (list of byte strings)
+			}
 	'''
 
 	# LDA is disabled so that all speakers are analyzed in the same space
 	# and all clusters across all speaker identifications are roughly
 	# Gaussian in that space
-	speaker_detected_by_window = audioSegmentation.speakerDiarization(filename, 0, lda_dim=0)
+	speaker_detected_by_window = audioSegmentation.speakerDiarization(filename, MAX_SPEAKERS, lda_dim=0)
 
 	# calculate necessary stats on labelled windows
 	WINDOW_LENGTH = .2 # in seconds
@@ -209,6 +218,23 @@ def analyze_audio_file(filename):
 			segments_by_speaker[speaker][-1] += window
 		else:
 			segments_by_speaker[speaker].append(window)
+
+	return segments_by_speaker
+
+
+def analyze_audio_file(filename):
+	''' Analyzes the file of audio, extracting and processing speech
+
+		Parameters:
+			filename
+				string, the name of the file to analyze
+	'''
+
+	# speaker diarization
+	if SPEAKER_DIARIZATION:
+		segments_by_speaker = split_by_speaker(filename)
+
+
 
 
 def start_processes():

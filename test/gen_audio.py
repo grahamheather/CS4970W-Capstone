@@ -23,7 +23,7 @@ def milliseconds_to_bytes(n):
 	return int(n * NUM_BYTES * RATE / MILLISECONDS_PER_SECOND)
 
 
-def generate_silence(filename):
+def generate_record_silence(filename):
 	silence = AudioSegment.silent(duration=MAX_SAMPLE_LENGTH*MILLISECONDS_PER_SECOND)
 	silence = silence.set_frame_rate(RATE)
 	silence.export(filename, format="wav")
@@ -31,7 +31,7 @@ def generate_silence(filename):
 	return None
 
 
-def generate_short(filename):
+def generate_record_short(filename):
 	file_path, file_extension = path.splitext(filename)
 
 	# generate text-to-speech
@@ -47,7 +47,7 @@ def generate_short(filename):
 	return None
 
 
-def generate_short_long(filename):
+def generate_record_short_long(filename):
 	file_path, file_extension = path.splitext(filename)
 
 	# generate text-to-speech
@@ -71,7 +71,7 @@ def generate_short_long(filename):
 	return (start, end)
 
 
-def generate_normal(filename):
+def generate_record_normal(filename):
 	file_path, file_extension = path.splitext(filename)
 
 	# generate text-to-speech
@@ -91,7 +91,7 @@ def generate_normal(filename):
 	return (start, end)
 
 
-def generate_too_long(filename):
+def generate_record_too_long(filename):
 	file_path, file_extension = path.splitext(filename)
 
 	# generate text-to-speech
@@ -112,7 +112,7 @@ def generate_too_long(filename):
 	return (start, end)
 
 
-def generate_pauses(filename):
+def generate_record_pauses(filename):
 	file_path, file_extension = path.splitext(filename)
 
 	# generate text-to-speech
@@ -144,7 +144,7 @@ def generate_pauses(filename):
 	return ((start2, end2), (start3, end3))
 
 
-def generate_noise(filename):
+def generate_record_noise(filename):
 	file_path, file_extension = path.splitext(filename)
 
 	# generate text-to-speech
@@ -172,7 +172,30 @@ def generate_noise(filename):
 	return (start, end)
 
 
-def generate_multivoice(filename):
+def generate_record_multivoice(filename):
+	file_path, file_extension = path.splitext(filename)
+
+	# generate text-to-speech
+	speech1 =  generate_speech("Hello", "en", file_path)
+	speech2 = generate_speech("¿Cómo se va?", "es", file_path)
+	speech = speech1 + speech2
+
+	# fix lengths
+	while len(speech) < MIN_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND + LARGER_MARGIN:
+		speech = speech + speech
+
+	# add silence and save
+	silence = AudioSegment.silent(duration=MAX_SAMPLE_LENGTH*MILLISECONDS_PER_SECOND + MARGIN).set_frame_rate(RATE)
+	audio = silence + speech + silence
+	audio.export(filename, format="wav")
+
+	start = milliseconds_to_bytes(len(silence))
+	end = milliseconds_to_bytes(len(silence) + len(speech))
+
+	return (start, end)
+
+
+def generate_record_multivoice_noise(filename):
 	file_path, file_extension = path.splitext(filename)
 
 	# generate text-to-speech
@@ -202,39 +225,108 @@ def generate_multivoice(filename):
 	return (start, end)
 
 
-def generate_multivoice_noise(filename):
+def generate_test_record_audio(folder):
+	stats = {}
+	stats["silence"] = generate_record_silence(path.join(folder, "silence.wav"))
+	stats["hello"] = generate_record_short(path.join(folder, "hello.wav"))
+	stats["hello+how"] = generate_record_short_long(path.join(folder, "hello+how.wav"))
+	stats["ground"] = generate_record_normal(path.join(folder, "ground.wav"))
+	stats["tale"] = generate_record_too_long(path.join(folder, "tale.wav"))
+	stats["star"] = generate_record_pauses(path.join(folder, "star.wav"))
+	stats["noise"] = generate_record_noise(path.join(folder, "noise.wav"))
+	stats["multivoice"] = generate_record_multivoice(path.join(folder, "hello+como.wav"))
+	stats["multivoice_noise"] = generate_record_multivoice_noise(path.join(folder, "hello+como_noise.wav"))
+
+	return stats
+
+
+def generate_diarization_normal(filename):
 	file_path, file_extension = path.splitext(filename)
 
 	# generate text-to-speech
-	speech1 =  generate_speech("Hello", "en", file_path)
-	speech2 = generate_speech("¿Cómo se va?", "es", file_path)
-	speech = speech1 + speech2
-
-	# fix lengths
-	while len(speech) < MIN_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND + LARGER_MARGIN:
-		speech = speech + speech
+	speech1 = generate_speech("Hello, how are you?", 'en', file_path)
+	speech2 = generate_speech("Hello, how are you?", 'es', file_path)
 
 	# add silence and save
-	silence = AudioSegment.silent(duration=MAX_SAMPLE_LENGTH*MILLISECONDS_PER_SECOND + MARGIN).set_frame_rate(RATE)
-	audio = silence + speech + silence
+	silence = AudioSegment.silent(duration=MAX_SILENCE_LENGTH*MILLISECONDS_PER_SECOND - MARGIN).set_frame_rate(RATE)
+	audio = speech1 + silence + speech2
 	audio.export(filename, format="wav")
 
-	start = milliseconds_to_bytes(len(silence))
-	end = milliseconds_to_bytes(len(silence) + len(speech))
+	start1 = 0
+	end1 = milliseconds_to_bytes(len(speech1))
+	start2 = end1 + milliseconds_to_bytes(len(silence))
+	end2 = start2 + milliseconds_to_bytes(len(speech2))
+
+	return ((start1, end1), (start2, end2))
+
+
+def generate_diarization_noise(filename):
+	file_path, file_extension = path.splitext(filename)
+
+	# generate text-to-speech
+	speech1 = generate_speech("Hello, how are you?", 'en', file_path)
+	speech2 = generate_speech("Hello, how are you?", 'es', file_path)
+
+	# add silence
+	silence = AudioSegment.silent(duration=MAX_SILENCE_LENGTH*MILLISECONDS_PER_SECOND - MARGIN).set_frame_rate(RATE)
+	audio = speech1 + silence + speech2
+
+	# add noise
+	noise = WhiteNoise(sample_rate=RATE, bit_depth=NUM_BYTES*BITS_PER_BYTE).to_audio_segment(duration=len(audio))
+	noise = noise - 30
+	audio = audio.overlay(noise)
+
+	# save
+	audio.export(filename, format="wav")
+
+	start1 = 0
+	end1 = milliseconds_to_bytes(len(speech1))
+	start2 = end1 + milliseconds_to_bytes(len(silence))
+	end2 = start2 + milliseconds_to_bytes(len(speech2))
+
+	return ((start1, end1), (start2, end2))
+
+
+def generate_diarization_single(filename):
+	file_path, file_extension = path.splitext(filename)
+
+	# generate text-to-speech
+	speech = generate_speech("Hello, how are you?", 'en', file_path)
+
+	# save
+	speech.export(filename, format="wav")
+
+	start = 0
+	end = milliseconds_to_bytes(len(speech))
 
 	return (start, end)
 
 
-def generate_all_audio(folder):
+def generate_diarization_single_noise(filename):
+	file_path, file_extension = path.splitext(filename)
+
+	# generate text-to-speech
+	speech = generate_speech("Hello, how are you?", 'en', file_path)
+
+	# add noise
+	noise = WhiteNoise(sample_rate=RATE, bit_depth=NUM_BYTES*BITS_PER_BYTE).to_audio_segment(duration=len(speech))
+	noise = noise - 30
+	audio = speech.overlay(noise)
+
+	# save
+	audio.export(filename, format="wav")
+
+	start = 0
+	end = milliseconds_to_bytes(len(speech))
+
+	return (start, end)
+
+
+def generate_test_diarization_audio(folder):
 	stats = {}
-	stats["silence"] = generate_silence(path.join(folder, "silence.wav"))
-	stats["hello"] = generate_short(path.join(folder, "hello.wav"))
-	stats["hello+how"] = generate_short_long(path.join(folder, "hello+how.wav"))
-	stats["ground"] = generate_normal(path.join(folder, "ground.wav"))
-	stats["tale"] = generate_too_long(path.join(folder, "tale.wav"))
-	stats["star"] = generate_pauses(path.join(folder, "star.wav"))
-	stats["noise"] = generate_noise(path.join(folder, "noise.wav"))
-	stats["multivoice"] = generate_multivoice(path.join(folder, "hello+como.wav"))
-	stats["multivoice_noise"] = generate_multivoice_noise(path.join(folder, "hello+como_noise.wav"))
+	stats["normal"] = generate_diarization_normal(path.join(folder, "diarization_normal.wav"))
+	stats["noise"] = generate_diarization_noise(path.join(folder, "diarization_noise.wav"))
+	stats["single"] = generate_diarization_single(path.join(folder, "diarization_single.wav"))
+	stats["single_noise"] = generate_diarization_single_noise(path.join(folder, "diarization_single_noise.wav"))
 
 	return stats

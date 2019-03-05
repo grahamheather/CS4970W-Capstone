@@ -39,11 +39,11 @@ def read_wav(filename):
 @pytest.fixture(scope="session", autouse=True)
 def generate_audio_files():
 	if REGENERATE_FILES:
-		stats = gen_audio.generate_all_audio(get_test_recording_dir())
-		with open(path.join(get_test_recording_dir(), 'stats.pickle'), 'wb') as f:
+		stats = gen_audio.generate_test_record_audio(get_test_recording_dir())
+		with open(path.join(get_test_recording_dir(), 'test_record_stats.pickle'), 'wb') as f:
 			pickle.dump(stats, f)
 	else:
-		with open(path.join(get_test_recording_dir(), 'stats.pickle'), 'rb') as f:
+		with open(path.join(get_test_recording_dir(), 'test_record_stats.pickle'), 'rb') as f:
 			stats = pickle.load(f)
 
 	return stats
