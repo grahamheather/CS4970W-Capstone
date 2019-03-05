@@ -49,6 +49,10 @@ SPEAKER_DIARIZATION = True
 MAX_SPEAKERS = 2
 
 
+def get_output_directory():
+	return os.path.join("CAT", "recordings")
+
+
 def open_stream():
 	''' Opens audio recording stream
 
@@ -84,7 +88,7 @@ def save_to_file(audio_buffer, file_queue):
 	# join segments of audio into a single byte string
 	data = b''.join(segment for segment in audio_buffer)
 
-	filename = os.path.join("CAT", "recordings", "audio{}.wav".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S%f")))
+	filename = os.path.join(get_output_directory(), "audio{}.wav".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S%f")))
 
 	# save file with unique name indicating date and time
 	wave_file = wave.open(filename, 'wb')

@@ -132,15 +132,3 @@ def test_split_by_speaker_single_noise(generate_audio_files):
 	desired_speech = audio[start + 10000:end - 10000]
 
 	assert desired_speech in segment
-
-
-'''
-	for speaker in result.keys():
-		for snippet_index in range(len(result[speaker])):
-			wave_file = wave.open("test{}-{}.wav".format(speaker, snippet_index), 'wb')
-			wave_file.setnchannels(record.NUM_CHANNELS)
-			wave_file.setsampwidth(record.NUM_BYTES)
-			wave_file.setframerate(record.RATE)
-			wave_file.writeframes(result[speaker][snippet_index])
-			print("{}-{}:".format(speaker, snippet_index), len(result[speaker][snippet_index]))
-'''
