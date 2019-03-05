@@ -12,6 +12,13 @@ BITS_PER_BYTE = 8
 MARGIN = 2 * VAD_FRAME_MS # in milliseconds
 LARGER_MARGIN = PERIODIC_SAMPLE_RATE * MILLISECONDS_PER_SECOND
 
+def generate_speech(text, lang, file_path):
+	speech_file = gTTS(text, lang=lang)
+	speech_file.save("{}.mp3".format(file_path))
+	speech = AudioSegment.from_mp3("{}.mp3".format(file_path))
+	remove("{}.mp3".format(file_path))
+	return speech
+
 def milliseconds_to_bytes(n):
 	return int(n * NUM_BYTES * RATE / MILLISECONDS_PER_SECOND)
 
@@ -28,10 +35,7 @@ def generate_short(filename):
 	file_path, file_extension = path.splitext(filename)
 
 	# generate text-to-speech
-	short = gTTS("hello")
-	short.save("{}.mp3".format(file_path))
-	short = AudioSegment.from_mp3("{}.mp3".format(file_path))
-	remove("{}.mp3".format(file_path))
+	short = generate_speech("hello", "en", file_path)
 
 	# add silence and save
 	short = short[:MIN_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND - MARGIN]
@@ -47,14 +51,8 @@ def generate_short_long(filename):
 	file_path, file_extension = path.splitext(filename)
 
 	# generate text-to-speech
-	short_file = gTTS("hello")
-	short_file.save("{}_short.mp3".format(file_path))
-	short_audio = AudioSegment.from_mp3("{}_short.mp3".format(file_path))
-	remove("{}_short.mp3".format(file_path))
-	long_file = gTTS("How are you doing?")
-	long_file.save("{}_long.mp3".format(file_path))
-	long_audio = AudioSegment.from_mp3("{}_long.mp3".format(file_path))
-	remove("{}_long.mp3".format(file_path))
+	short_audio = generate_speech("hello", "en", file_path)
+	long_audio = generate_speech("How are you doing?", 'en', file_path)
 
 	# fix lengths
 	if len(short_audio) > MIN_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND - MARGIN:
@@ -77,10 +75,7 @@ def generate_normal(filename):
 	file_path, file_extension = path.splitext(filename)
 
 	# generate text-to-speech
-	file = gTTS("In a hole in the ground there lived a hobbit.")
-	file.save("{}.mp3".format(file_path))
-	speech = AudioSegment.from_mp3("{}.mp3".format(file_path))
-	remove("{}.mp3".format(file_path))
+	speech = generate_speech("In a hole in the ground there lived a hobbit.", "en", file_path)
 
 	# fix lengths
 	while len(speech) < MIN_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND + LARGER_MARGIN:
@@ -100,10 +95,8 @@ def generate_too_long(filename):
 	file_path, file_extension = path.splitext(filename)
 
 	# generate text-to-speech
-	file = gTTS("It was the best of times, it was the worst of times, it was the age of wisdom, it was the age of foolishness, it was the epoch of belief, it was the epoch of incredulity, it was the season of Light, it was the season of Darkness, it was the spring of hope, it was the winter of despair, we had everything before us, we had nothing before us, we were all going direct to Heaven, we were all going direct the other way – in short, the period was so far like the present period, that some of its noisiest authorities insisted on its being received, for good or for evil, in the superlative degree of comparison only.")
-	file.save("{}.mp3".format(file_path))
-	speech = AudioSegment.from_mp3("{}.mp3".format(file_path))
-	remove("{}.mp3".format(file_path))
+	speech = generate_speech("It was the best of times, it was the worst of times, it was the age of wisdom, it was the age of foolishness, it was the epoch of belief, it was the epoch of incredulity, it was the season of Light, it was the season of Darkness, it was the spring of hope, it was the winter of despair, we had everything before us, we had nothing before us, we were all going direct to Heaven, we were all going direct the other way – in short, the period was so far like the present period, that some of its noisiest authorities insisted on its being received, for good or for evil, in the superlative degree of comparison only.",
+				"en", file_path)
 
 	# fix lengths
 	while len(speech) < MAX_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND + LARGER_MARGIN:
@@ -123,18 +116,9 @@ def generate_pauses(filename):
 	file_path, file_extension = path.splitext(filename)
 
 	# generate text-to-speech
-	file1 = gTTS("Do or do not.")
-	file1.save("{}1.mp3".format(file_path))
-	speech1 = AudioSegment.from_mp3("{}1.mp3".format(file_path))
-	remove("{}1.mp3".format(file_path))
-	file2 = gTTS("There is no try.")
-	file2.save("{}2.mp3".format(file_path))
-	speech2 = AudioSegment.from_mp3("{}2.mp3".format(file_path))
-	remove("{}2.mp3".format(file_path))
-	file3 = gTTS("May the force be with you.")
-	file3.save("{}3.mp3".format(file_path))
-	speech3 = AudioSegment.from_mp3("{}3.mp3".format(file_path))
-	remove("{}3.mp3".format(file_path))
+	speech1 = generate_speech("Do or do not.", "en", file_path)
+	speech2 = generate_speech("There is no try.", "en", file_path)
+	speech3 = generate_speech("May the force be with you.", "en", file_path)
 
 	# fix lengths
 	if len(speech1) > MIN_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND - MARGIN:
@@ -164,10 +148,7 @@ def generate_noise(filename):
 	file_path, file_extension = path.splitext(filename)
 
 	# generate text-to-speech
-	file = gTTS("How are you doing today?")
-	file.save("{}.mp3".format(file_path))
-	speech = AudioSegment.from_mp3("{}.mp3".format(file_path))
-	remove("{}.mp3".format(file_path))
+	speech = generate_speech("How are you doing today?", "en", file_path)
 
 	# fix lengths
 	while len(speech) < MIN_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND + LARGER_MARGIN:
@@ -195,14 +176,8 @@ def generate_multivoice(filename):
 	file_path, file_extension = path.splitext(filename)
 
 	# generate text-to-speech
-	file1 = gTTS("Hello")
-	file1.save("{}_en.mp3".format(file_path))
-	speech1 = AudioSegment.from_mp3("{}_en.mp3".format(file_path))
-	remove("{}_en.mp3".format(file_path))
-	file2 = gTTS("¿Cómo se va?", lang='es')
-	file2.save("{}_es.mp3".format(file_path))
-	speech2 = AudioSegment.from_mp3("{}_es.mp3".format(file_path))
-	remove("{}_es.mp3".format(file_path))
+	speech1 = generate_speech("Hello", "en", file_path)
+	speech2 = generate_speech("¿Cómo se va?", "es", file_path)
 	speech = speech1 + speech2
 
 	# fix lengths
@@ -231,14 +206,8 @@ def generate_multivoice_noise(filename):
 	file_path, file_extension = path.splitext(filename)
 
 	# generate text-to-speech
-	file1 = gTTS("Hello")
-	file1.save("{}_en.mp3".format(file_path))
-	speech1 = AudioSegment.from_mp3("{}_en.mp3".format(file_path))
-	remove("{}_en.mp3".format(file_path))
-	file2 = gTTS("¿Cómo se va?", lang='es')
-	file2.save("{}_es.mp3".format(file_path))
-	speech2 = AudioSegment.from_mp3("{}_es.mp3".format(file_path))
-	remove("{}_es.mp3".format(file_path))
+	speech1 =  generate_speech("Hello", "en", file_path)
+	speech2 = generate_speech("¿Cómo se va?", "es", file_path)
 	speech = speech1 + speech2
 
 	# fix lengths
