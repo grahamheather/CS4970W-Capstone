@@ -2,8 +2,6 @@ import { Request, Response, NextFunction } from 'express';
 import { TeamCatDataAccess } from '../data-access/teamcat-data-access'
 import * as Debug from 'debug';
 import { BaseController } from './base-controller';
-import { Device } from 'models/device';
-import { DeviceSettings } from 'models/device-settings';
 const debug = Debug(`${process.env.npm_package_name}:device-settings-controller`);
 
 export class DeviceSettingsController extends BaseController {
