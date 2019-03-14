@@ -1,0 +1,23 @@
+.device-card {
+    margin: 2.5em 3.5em;
+    width: 20em;
+
+    mat-card-title, mat-card-subtitle {
+        text-overflow: ellipsis;
+        overflow: hidden;
+    }
+
+    mat-card-actions {
+        display: flex;
+    }
+}
+
+.spacer {
+    flex: 1 1 100%;
+}
+
+.add-device-button {
+    position: fixed;
+    bottom: 2.5em;
+    right: 3.5em;
+}

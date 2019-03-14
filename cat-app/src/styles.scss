@@ -1,1 +1,15 @@
-/* You can add global styles to this file, and also import other style files */
+@import '~@angular/material/theming';
+@import './app/app.component.theme.scss';
+@include mat-core();
+
+$app-primary: mat-palette($mat-cyan);
+$app-accent:  mat-palette($mat-blue-gray);
+
+$app-theme: mat-dark-theme($app-primary, $app-accent);
+
+@include angular-material-theme($app-theme);
+@include app-theme($app-theme);
+
+body {
+    margin: 0;
+}

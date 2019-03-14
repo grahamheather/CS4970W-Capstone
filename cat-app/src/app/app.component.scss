@@ -1,0 +1,13 @@
+mat-toolbar {
+    display: flex;
+}
+
+.spacer {
+    flex: 1 1 100%;
+}
+
+.nav-buttons {
+    button {
+        margin: 0 .1em;
+    }
+}
