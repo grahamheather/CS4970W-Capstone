@@ -1,5 +1,19 @@
+.app-root {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
 mat-toolbar {
     display: flex;
+    flex: none;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.app-container {
+    flex: 0 1 100%;
 }
 
 .spacer {
@@ -8,6 +22,6 @@ mat-toolbar {
 
 .nav-buttons {
     button {
-        margin: 0 .1em;
+        margin: 0 .1rem;
     }
 }

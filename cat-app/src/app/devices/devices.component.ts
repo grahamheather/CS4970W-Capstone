@@ -1,4 +1,6 @@
 import { Component, OnInit } from '@angular/core';
+import { MatBottomSheet, MatBottomSheetConfig } from '@angular/material';
+import { AddDeviceSheetComponent } from '../add-device-sheet/add-device-sheet.component';
 
 @Component({
   selector: 'app-devices',
@@ -7,9 +9,11 @@ import { Component, OnInit } from '@angular/core';
 })
 export class DevicesComponent implements OnInit {
 
-  constructor() { }
+  constructor(private bottomSheet: MatBottomSheet) {}
 
-  ngOnInit() {
+  ngOnInit() {}
+
+  openAddDeviceSheet(): void {
+    this.bottomSheet.open(AddDeviceSheetComponent);
   }
-
 }

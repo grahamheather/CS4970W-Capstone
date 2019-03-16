@@ -1,4 +1,4 @@
-<div class="app">
+<div class="app-root">
   <mat-toolbar color="primary">
     <span>CAT</span>
     <span class="spacer"></span>
@@ -7,6 +7,8 @@
       <button mat-button>Devices</button>
       <button mat-button>Settings</button>
     </span>
-  </mat-toolbar>    
+  </mat-toolbar>
+  <div class="app-container">
+    <router-outlet></router-outlet>
+  </div>
 </div>
-<router-outlet></router-outlet>

@@ -1,6 +1,19 @@
+.devices-root {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.devices-container {
+    padding: 1.25rem 1.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+}
+
 .device-card {
-    margin: 2.5em 3.5em;
-    width: 20em;
+    width: 20rem;
+    margin: 1.25rem 1.75rem;
 
     mat-card-title, mat-card-subtitle {
         text-overflow: ellipsis;
@@ -9,15 +22,20 @@
 
     mat-card-actions {
         display: flex;
+        align-items: center;
     }
 }
 
-.spacer {
-    flex: 1 1 100%;
+.add-device-button {
+    border-radius: .25rem .25rem 0 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    position: fixed;
+    bottom: 0;
+    z-index: 1000;
 }
 
-.add-device-button {
-    position: fixed;
-    bottom: 2.5em;
-    right: 3.5em;
+.spacer {
+    flex: 0 1 100%;
 }
