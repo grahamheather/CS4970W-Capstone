@@ -1,21 +1,21 @@
 <div class="devices-root">
   <div class="devices-container">
-    <mat-card class="device-card">
-      <mat-card-title>Handle</mat-card-title>
-      <mat-card-subtitle>Description</mat-card-subtitle>
+    <mat-card class="device-card" *ngFor="let device of devices$ | async">
+      <mat-card-title *ngIf="device.handle">{{device.handle}}</mat-card-title>
+      <mat-card-subtitle *ngIf="device.description">{{device.description}}</mat-card-subtitle>
       <mat-card-content>
         <mat-list>
-          <mat-list-item class="device-info-item">
+          <mat-list-item class="device-info-item" *ngIf="device.location">
             <mat-icon mat-list-icon>place</mat-icon>
-            <span>Location</span>
+            <span>{{device.location}}</span>
           </mat-list-item>
-          <mat-list-item class="device-info-item">
+          <mat-list-item class="device-info-item" *ngIf="device.createdDate">
             <mat-icon mat-list-icon>today</mat-icon>
-            <span>Created</span>
+            <span>{{formatDate(device.createdDate)}}</span>
           </mat-list-item>
-          <mat-list-item class="device-info-item">
+          <mat-list-item class="device-info-item" *ngIf="device.ipAddress">
             <mat-icon mat-list-icon>language</mat-icon>
-            <span>IP address</span>
+            <span>{{device.ipAddress}}</span>
           </mat-list-item>
         </mat-list>
       </mat-card-content>

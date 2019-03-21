@@ -14,6 +14,8 @@ import { MatListModule } from '@angular/material/list';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatBottomSheetModule } from '@angular/material/bottom-sheet';
 import { AddDeviceSheetComponent } from './add-device-sheet/add-device-sheet.component';
+import { DevicesService } from './services/devices.service';
+import { HttpClientModule } from '@angular/common/http';
 
 @NgModule({
   declarations: [
@@ -31,12 +33,13 @@ import { AddDeviceSheetComponent } from './add-device-sheet/add-device-sheet.com
     MatIconModule,
     MatListModule,
     MatMenuModule,
-    MatBottomSheetModule
+    MatBottomSheetModule,
+    HttpClientModule
   ],
   entryComponents: [
     AddDeviceSheetComponent
   ],
-  providers: [],
+  providers: [DevicesService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

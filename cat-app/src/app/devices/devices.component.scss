@@ -14,13 +14,21 @@
 .device-card {
     width: 20rem;
     margin: 1.25rem 1.75rem;
+    display: flex;
+    flex-direction: column;
 
     mat-card-title, mat-card-subtitle {
+        flex: 1 0 auto;
         text-overflow: ellipsis;
         overflow: hidden;
     }
 
+    mat-card-content {
+        flex: 0 1 100%;
+    }
+
     mat-card-actions {
+        flex: 1 0 auto;
         display: flex;
         align-items: center;
     }
