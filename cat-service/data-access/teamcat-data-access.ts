@@ -13,7 +13,7 @@ export class TeamCatDataAccess {
         host: 'teamcat.cjmsq3fjput7.us-east-2.rds.amazonaws.com', 
         database: 'teamcat',
         user: 'teamcatmaster',
-        password: '', // TODO: Insert password before running
+        password: process.env.TeamcatDbPw, 
         connectionLimit: 5
     });
 
