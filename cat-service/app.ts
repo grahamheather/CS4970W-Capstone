@@ -14,6 +14,7 @@ import bodyParser = require('body-parser');
 import { DeviceSettingsController } from './routes/device-settings-controller';
 import { RecordingsController } from './routes/recordings-controller';
 import { SpeakersController } from './routes/speakers-controller';
+import * as cors from "cors";
 
 var app = express();
 var teamcatDb = new TeamCatDataAccess();
@@ -28,6 +29,7 @@ app.set('view engine', 'pug');
 
 app.use(express.static(path.join(__dirname, '../public')));
 app.use(bodyParser.urlencoded());
+app.use(cors());
 
 app.use('/', index);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc));
