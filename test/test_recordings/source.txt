@@ -1,0 +1,1 @@
+All testing audio recordings were created with the GTTS Python library which uses Google Translate's text-to-speech API.
