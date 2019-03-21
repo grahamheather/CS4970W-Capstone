@@ -62,16 +62,16 @@ app.use((err: CatError, req: Request, res: Response, next: NextFunction) => {
         }
     }
 
-    if(req.method !== "GET" || !req.accepts('text/html')) {
-        res.json({ message: err.message });
+    if(!req.accepts('application/json')) {
+        res.render('error', {
+            title: process.env.npm_package_name, 
+            browserRefreshUrl: process.env.BROWSER_REFRESH_URL,
+            error: err
+        });
         return;
     }
 
-    res.render('error', {
-        title: process.env.npm_package_name, 
-        browserRefreshUrl: process.env.BROWSER_REFRESH_URL,
-        error: err
-    });
+    res.json({ message: err.message });
 });
 
 app.set('port', process.env.PORT || 3000);
