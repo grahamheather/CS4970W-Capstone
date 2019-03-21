@@ -8,7 +8,7 @@
     "serve": "npm run build && npm run start",
     "watch": "concurrently \"tsc --watch\" \"browser-refresh\"",
     "debug": "set DEBUG=cat-service* && npm run watch",
-    "serve-prod": "NODE_ENV=production PORT=80 npm run serve"
+    "serve-prod": "NODE_ENV=production PORT=80 DEBUG=cat-service* npm run serve"
   },
   "description": "CatService",
   "author": {
