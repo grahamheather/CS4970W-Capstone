@@ -1,28 +1,60 @@
 <div class="devices-root">
   <div class="devices-container">
-    <mat-card class="device-card" *ngFor="let device of devices$ | async">
-      <mat-card-title *ngIf="device.handle">{{device.handle}}</mat-card-title>
-      <mat-card-subtitle *ngIf="device.description">{{device.description}}</mat-card-subtitle>
-      <mat-card-content>
+    <mat-card class="device-card" *ngFor="let card of deviceCards$ | async">
+      <mat-card-header>
+        <mat-icon mat-card-avatar *ngIf="!card.showSettings">perm_device_information</mat-icon>
+        <mat-icon mat-card-avatar *ngIf="card.showSettings">settings</mat-icon>
+        <mat-card-title *ngIf="card.device.handle">{{card.device.handle}}</mat-card-title>
+        <mat-card-subtitle *ngIf="card.device.description">{{card.device.description}}</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content class="device-card-content" *ngIf="!card.showSettings">
         <mat-list>
-          <mat-list-item class="device-info-item" *ngIf="device.location">
+          <mat-list-item class="device-info-item" *ngIf="card.device.location">
             <mat-icon mat-list-icon>place</mat-icon>
-            <span>{{device.location}}</span>
+            <span>{{card.device.location}}</span>
           </mat-list-item>
-          <mat-list-item class="device-info-item" *ngIf="device.createdDate">
+          <mat-list-item class="device-info-item" *ngIf="card.device.createdDate">
             <mat-icon mat-list-icon>today</mat-icon>
-            <span>{{formatDate(device.createdDate)}}</span>
+            <span>{{formatDate(card.device.createdDate)}}</span>
           </mat-list-item>
-          <mat-list-item class="device-info-item" *ngIf="device.ipAddress">
+          <mat-list-item class="device-info-item" *ngIf="card.device.ipAddress">
             <mat-icon mat-list-icon>language</mat-icon>
-            <span>{{device.ipAddress}}</span>
+            <span>{{card.device.ipAddress}}</span>
           </mat-list-item>
         </mat-list>
       </mat-card-content>
-      <mat-card-actions>
-        <button mat-menu-item>
+      <mat-card-actions  class="device-card-actions" *ngIf="!card.showSettings">
+        <button mat-menu-item (click)="showSettings(card)">
           <mat-icon>settings</mat-icon>
-          <span>Settings</span>
+          <span>View settings</span>
+        </button>
+        <span class="spacer"></span>
+        <button mat-icon-button>
+          <mat-icon [matMenuTriggerFor]="menu">more_vert</mat-icon>
+        </button>
+        <mat-menu #menu>
+          <button mat-menu-item>
+            <mat-icon>edit</mat-icon>
+            <span>Edit</span>
+          </button>
+          <button mat-menu-item>
+            <mat-icon>delete</mat-icon>
+            <span>Delete</span>
+          </button>
+        </mat-menu>
+      </mat-card-actions>
+      <mat-card-content class="settings-card-content" *ngIf="card.showSettings">
+        <mat-list>
+          <mat-list-item class="device-info-item" *ngIf="card.device.createdDate">
+            <mat-icon mat-list-icon>today</mat-icon>
+            <span>{{formatDate(card.device.createdDate)}}</span>
+          </mat-list-item>
+        </mat-list>
+      </mat-card-content>
+      <mat-card-actions  class="settings-card-actions" *ngIf="card.showSettings">
+        <button mat-menu-item (click)="hideSettings(card)">
+          <mat-icon>perm_device_information</mat-icon>
+          <span>View device</span>
         </button>
         <span class="spacer"></span>
         <button mat-icon-button>

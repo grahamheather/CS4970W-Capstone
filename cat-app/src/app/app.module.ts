@@ -16,6 +16,7 @@ import { MatBottomSheetModule } from '@angular/material/bottom-sheet';
 import { AddDeviceSheetComponent } from './add-device-sheet/add-device-sheet.component';
 import { DevicesService } from './services/devices.service';
 import { HttpClientModule } from '@angular/common/http';
+import { MatDividerModule } from '@angular/material/divider';
 
 @NgModule({
   declarations: [
@@ -34,7 +35,8 @@ import { HttpClientModule } from '@angular/common/http';
     MatListModule,
     MatMenuModule,
     MatBottomSheetModule,
-    HttpClientModule
+    HttpClientModule,
+    MatDividerModule
   ],
   entryComponents: [
     AddDeviceSheetComponent

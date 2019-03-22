@@ -4,6 +4,8 @@ import { AddDeviceSheetComponent } from '../add-device-sheet/add-device-sheet.co
 import { DevicesService } from '../services/devices.service';
 import { Device } from '../models/device';
 import { Observable } from 'rxjs';
+import { DeviceCard } from '../models/device-card';
+import { map } from 'rxjs/operators';
 
 @Component({
   selector: 'app-devices',
@@ -12,10 +14,20 @@ import { Observable } from 'rxjs';
 })
 export class DevicesComponent implements OnInit {
 
-  devices$: Observable<Device[]>;
+  deviceCards$: Observable<DeviceCard[]>;
 
   constructor(private bottomSheet: MatBottomSheet, private devicesService: DevicesService) {
-    this.devices$ = this.devicesService.getAllDevices();
+    this.deviceCards$ = this.devicesService.getAllDevices()
+      .pipe(
+        map(devices => 
+          devices.map(device => {
+            const card: DeviceCard = {
+              device: device
+            }
+            return card;
+          })
+        )
+      );
   }
 
   ngOnInit() {}
@@ -35,5 +47,13 @@ export class DevicesComponent implements OnInit {
       month: 'short', 
       year: 'numeric'
     });
+  }
+
+  private showSettings(card: DeviceCard): void {
+    card.showSettings = true;
+  }
+
+  private hideSettings(card: DeviceCard): void {
+    card.showSettings = false;
   }
 }

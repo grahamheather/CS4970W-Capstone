@@ -17,10 +17,18 @@
     display: flex;
     flex-direction: column;
 
-    mat-card-title, mat-card-subtitle {
+    mat-card-header {
         flex: 1 0 auto;
-        text-overflow: ellipsis;
-        overflow: hidden;
+
+        mat-icon[mat-card-avatar] {
+            display: flex;
+            justify-content: center;
+        }
+
+        mat-card-title, mat-card-subtitle {
+            text-overflow: ellipsis;
+            overflow: hidden;
+        }
     }
 
     mat-card-content {
