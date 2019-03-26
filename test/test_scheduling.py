@@ -34,7 +34,10 @@ def test_start_processes(monkeypatch):
 	global analysis_process_counter
 	analysis_process_counter = multiprocessing.Value('i', 0)
 
-	def increment_analysis_process_counter(q):
+	def increment_analysis_process_counter(a, b, c):
+		assert type(a) == multiprocessing.queues.Queue
+		assert type(b) == multiprocessing.managers.DictProxy
+		assert type(c) == multiprocessing.synchronize.Lock
 		global analysis_process_counter
 		with analysis_process_counter.get_lock():
 			analysis_process_counter.value += 1
@@ -53,9 +56,15 @@ def test_start_processes(monkeypatch):
 
 
 def test_analyze_audio_files(monkeypatch):
-	# replace the audio analysis function with placing the filename that would have been processed into a queue
 	processed_files = multiprocessing.Queue()
-	monkeypatch.setattr(record, "analyze_audio_file", lambda filename: processed_files.put(filename))
+
+	# replace the audio analysis function with placing the filename that would have been processed into a queue
+	# also check that unused arguments are appropriate
+	def analyze_audio_file_mock(filename, speaker_dictionary, speaker_dictionary_lock):
+		assert type(speaker_dictionary) == multiprocessing.managers.DictProxy
+		assert type(speaker_dictionary_lock) == multiprocessing.synchronize.Lock
+		processed_files.put(filename)
+	monkeypatch.setattr(record, "analyze_audio_file", analyze_audio_file_mock)
 
 	# initialize a list of files to process
 	file_queue = multiprocessing.Queue()
@@ -71,8 +80,13 @@ def test_analyze_audio_files(monkeypatch):
 	# check that all filenames were successfully placed in the queue
 	assert file_queue.qsize() == len(filenames)
 
+	# other arguments for the processing threads
+	process_manager = multiprocessing.Manager()
+	speaker_dictionary = process_manager.dict()
+	speaker_dictionary_lock = multiprocessing.Lock()
+
 	# start the audio analysis Process
-	process = multiprocessing.Process(target=record.analyze_audio_files, args=(file_queue,))
+	process = multiprocessing.Process(target=record.analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock))
 	process.start()
 
 	# give the Process sufficient time to iterate over all files
@@ -97,13 +111,18 @@ def test_analyze_audio_files(monkeypatch):
 def test_analyze_audio_files_late_add(monkeypatch):
 	# replace the audio analysis function with placing the filename that would have been processed into a queue
 	processed_files = multiprocessing.Queue()
-	monkeypatch.setattr(record, "analyze_audio_file", lambda filename: processed_files.put(filename))
+	monkeypatch.setattr(record, "analyze_audio_file", lambda filename, _, __: processed_files.put(filename))
 
 	# initialize an empty queue of files
 	file_queue = multiprocessing.Queue()
 
+	# other arguments for the processing threads
+	process_manager = multiprocessing.Manager()
+	speaker_dictionary = process_manager.dict()
+	speaker_dictionary_lock = multiprocessing.Lock()
+
 	# start the audio analysis Process
-	process = multiprocessing.Process(target=record.analyze_audio_files, args=(file_queue,))
+	process = multiprocessing.Process(target=record.analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock))
 	process.start()
 
 	# wait a small amount of time

@@ -1,13 +1,16 @@
 import collections
 import datetime
 import os
+import uuid
 
-#from queue import Queue
+from numpy import trace, transpose, log, inf
+from numpy.linalg import inv, det, LinAlgError
+
 # multiprocessing avoids Python's Global Interpreter Lock which
 # prevents more than one thread running at a time.
 # This allows the program to, ideally, take advantage of multiple
 # cores on the Raspberry Pi.
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, Manager, Value, Lock, Array
 
 import pyaudio
 import wave
@@ -47,6 +50,9 @@ MAX_SILENCE_FRAMES = int(MAX_SILENCE_LENGTH * MILLISECONDS_PER_SECOND / VAD_FRAM
 # speaker diarization settings
 SPEAKER_DIARIZATION = True
 MAX_SPEAKERS = 2
+
+# speaker re-identification settings
+SPEAKER_REID_DIVERGENCE_THRESHOLD = 1_000_000
 
 
 def get_output_directory():
@@ -161,12 +167,16 @@ def record(file_queue):
 				last_speech = None
 
 
-def analyze_audio_files(file_queue):
+def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock):
 	''' Analyzes files of audio extracting and processing speech
 
 		Parameters:
 			file_queue
 				queue to get filenames from
+			speaker_dictionary
+				dictionary to store statistics about each speaker in
+			speaker_dictionary_lock
+				a lock so that multiple processes do not try to read/write/update/delete speakers concurrently
 	'''
 
 	# analysis processes process files indefinitely
@@ -176,10 +186,31 @@ def analyze_audio_files(file_queue):
 		filename = file_queue.get()
 		
 		# process the file
-		analyze_audio_file(filename)
+		analyze_audio_file(filename, speaker_dictionary, speaker_dictionary_lock)
 
 		# delete the file
 		os.remove(filename)
+
+
+def analyze_audio_file(filename, speaker_dictionary, speaker_dictionary_lock):
+	''' Analyzes the file of audio, extracting and processing speech
+
+		Parameters:
+			filename
+				string, the name of the file to analyze
+			speaker_dictionary
+				dictionary to store statistics about each speaker in
+			speaker_dictionary_lock
+				a lock so that multiple processes do not try to read/write/update/delete speakers concurrently
+
+	'''
+
+	# speaker diarization
+	if SPEAKER_DIARIZATION:
+		segments_by_speaker, speaker_means, speaker_covariances = split_by_speaker(filename)
+		speaker_id_map = {}
+		for speaker in segments_by_speaker:
+			speaker_id_map[speaker] = identify_speaker(speaker_means[speaker, :], speaker_covariances[speaker, :, :], speaker_dictionary, speaker_dictionary_lock)
 
 
 def split_by_speaker(filename):
@@ -192,13 +223,15 @@ def split_by_speaker(filename):
 		Returns:
 			{
 				speaker_id: list of windows of audio data (list of byte strings)
-			}
+			},
+			list of multi-dimensional means of the normal PDF associated with each speaker,
+			list of covariance matrices of the normal PDF associated with each speaker
 	'''
 
 	# LDA is disabled so that all speakers are analyzed in the same space
 	# and all clusters across all speaker identifications are roughly
 	# Gaussian in that space
-	speaker_detected_by_window = audioSegmentation.speakerDiarization(filename, MAX_SPEAKERS, lda_dim=0)
+	speaker_detected_by_window, speaker_means, speaker_covariances = audioSegmentation.speakerDiarization(filename, MAX_SPEAKERS, lda_dim=0)
 
 	# calculate necessary stats on labelled windows
 	WINDOW_LENGTH = .2 # in seconds
@@ -213,44 +246,153 @@ def split_by_speaker(filename):
 	previous_speaker = None
 	for window_index in range(len(speaker_detected_by_window)):
 		previous_speaker = speaker_detected_by_window[window_index - 1] if window_index > 0 else None
-		speaker = speaker_detected_by_window[window_index]
+		speaker = int(speaker_detected_by_window[window_index])
 		start_frame = LENGTH_OF_WINDOW_IN_BYTES * window_index
 		
-		# floor ceiling or round?
 		window = audio[start_frame:start_frame + LENGTH_OF_WINDOW_IN_BYTES]
 		if speaker == previous_speaker:
 			segments_by_speaker[speaker][-1] += window
 		else:
 			segments_by_speaker[speaker].append(window)
 
-	return segments_by_speaker
+	return segments_by_speaker, speaker_means, speaker_covariances
 
 
-def analyze_audio_file(filename):
-	''' Analyzes the file of audio, extracting and processing speech
+def multivariate_normal_KL_divergence(mean0, covariance0, mean1, covariance1):
+	''' Calculates the KL divergence of two multivariate normal PDFs
 
 		Parameters:
-			filename
-				string, the name of the file to analyze
+			mean0
+				mean of PDF 0
+			covariance0
+				covariance matrix of PDF 0
+			mean1
+				mean of PDF 1
+			covariance1
+				covariance matrix of PDF 1
+
+		Returns:
+			float, value of KL divergence
 	'''
 
-	# speaker diarization
-	if SPEAKER_DIARIZATION:
-		segments_by_speaker = split_by_speaker(filename)
+	d = mean0.shape[0] # dimension of data
+
+	# KL divergence cannot be calculated for singular covariance matrices
+	if det(covariance0) == 0 or det(covariance1) == 0:
+		return inf
+
+	try:
+		divergence = .5 * (
+			trace(inv(covariance1).dot(covariance0))
+			+ transpose(mean1 - mean0).dot(inv(covariance1).dot(mean1 - mean0))
+			- d
+			+ log( det(covariance1) / det(covariance0) )
+		)
+	except LinAlgError as e:
+		# matrix may be singular (if determinant was imprecise)
+		divergence = inf
+
+	return divergence
 
 
+def add_new_speaker(audio_mean, audio_covariance, speaker_dictionary):
+	''' Utility function to add a new speaker to the dictionary
+
+		Parameters:
+			audio_mean
+				mean of the multivariate normal PDF of the new speaker
+			audio_covariance
+				covariance matrix of the multivariate normal PDF of the new speaker
+			speaker_dictionary
+				dictionary of previously recorded speakers
+				{
+					'speakerID': (mean, covariance, count)
+				}
+		Returns:
+			new speaker ID generated
+	'''
+
+	# store a new speaker
+	speaker_id = str(uuid.uuid4()) # generates a random ID, highly unlikely to be duplicated
+	speaker_dictionary[speaker_id] = (audio_mean, audio_covariance, 1)
+
+	return speaker_id
+
+
+def identify_speaker(audio_mean, audio_covariance, speaker_dictionary, speaker_dictionary_lock):
+	''' Matches a speaker in an audio file to a previously recorded
+		speaker
+
+		Parameters:
+			audio_mean
+				mean of the multivariate normal PDF of the new speaker
+			audio_covariance
+				covariance matrix of the multivariate normal PDF of the new speaker
+			speaker_dictionary
+				dictionary of previously recorded speakers
+				{
+					'speakerID': (mean, covariance, count)
+				}
+			speaker_dictionary_lock
+				a lock so that multiple processes do not try to read/write/update/delete speakers concurrently
+		Returns:
+			ID of the speaker in the audio
+	'''
+
+	speaker_dictionary_lock.acquire()
+
+	# if there are no speakers yet, add a new one
+	if len(speaker_dictionary) == 0:
+		speaker_id = add_new_speaker(audio_mean, audio_covariance, speaker_dictionary)
+
+	else:
+		# find the previously recorded speaker with the lowest divergence
+		speaker_id = None
+		speaker_mean = None
+		speaker_covariance = None
+		speaker_count = None
+		divergence = None
+		for temp_speaker_id, (temp_speaker_mean, temp_speaker_covariance, temp_speaker_count) in speaker_dictionary.items():
+			temp_divergence = multivariate_normal_KL_divergence(temp_speaker_mean, temp_speaker_covariance, audio_mean, audio_covariance)
+			if divergence == None or (not temp_divergence == None and temp_divergence < divergence):
+				divergence = temp_divergence
+				speaker_id = temp_speaker_id
+				speaker_mean = temp_speaker_mean
+				speaker_covariance = temp_speaker_covariance
+				speaker_count = temp_speaker_count
+
+		if divergence == None: # KL divergence is invalid on all pairs
+			# add a new speaker
+			speaker_id = add_new_speaker(audio_mean, audio_covariance, speaker_dictionary)
+		elif divergence <= SPEAKER_REID_DIVERGENCE_THRESHOLD:
+			# update speaker values
+			new_speaker_count = speaker_count + 1
+			new_mean = (speaker_mean * speaker_count + audio_mean) / new_speaker_count
+			new_covariance = (speaker_covariance * speaker_count + audio_covariance) / new_speaker_count
+			speaker_dictionary[speaker_id] = (new_mean, new_covariance, new_speaker_count)
+		else:
+			# or add a new speaker
+			speaker_id = add_new_speaker(audio_mean, audio_covariance, speaker_dictionary)
+
+
+	speaker_dictionary_lock.release()
+
+	return speaker_id
 
 
 def start_processes():
 	''' Starts all process of the program '''
 
+	process_manager = Manager()
+	speaker_dictionary = process_manager.dict()
+	speaker_dictionary_lock = Lock()
 	file_queue = Queue() # thread-safe FIFO queue
 
 	# ideally of the cores should run the recording process
 	# and the other cores will run the analysis processes
 	recording_process = Process(target=record, args=(file_queue,))
 	recording_process.start()
-	analysis_processes = [Process(target=analyze_audio_files, args=(file_queue,)) for _ in range(NUM_CORES - 1)]
+	analysis_processes = [Process(target=analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock)) for _ in range(NUM_CORES - 1)]
 	for process in analysis_processes:
 		process.start()
 
