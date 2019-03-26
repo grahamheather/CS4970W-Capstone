@@ -1,4 +1,5 @@
 import pytest
+import unittest.mock as mock
 import multiprocessing
 import time
 import os
@@ -156,3 +157,59 @@ def test_analyze_audio_files_late_add(monkeypatch):
 	# check that all files were ultimately deleted
 	for filename in filenames:
 		assert not os.path.isfile(filename)
+
+@mock.patch('CAT.record.transmit')
+@mock.patch('CAT.record.extract_features')
+@mock.patch('CAT.record.identify_speakers')
+def test_analyze_audio_file_speaker_diarization(identify_speakers_mock, extract_features_mock, transmit_mock):
+	# enable speaker diarization
+	record.SPEAKER_DIARIZATION = True
+
+	# initialize mock return values
+	identify_speakers_mock.return_value=[('file1.wav', 'speaker1'), ('file2.wav', 'speaker2')]
+	extract_features_mock.side_effect = [[1, 2, 3, 4], [5, 6, 7, 8]]
+	
+	# call function
+	dictionary = {}
+	lock = multiprocessing.Lock()
+	record.analyze_audio_file('test_file.wav', dictionary, lock)
+	
+	# test identify_speakers called properly
+	identify_speakers_mock.assert_called_once_with('test_file.wav', dictionary, lock)
+	
+	# test extract_features called properly
+	assert extract_features_mock.call_count == 2
+	extract_features_mock.assert_has_calls([mock.call('file1.wav'), mock.call('file2.wav')])
+
+	# test transmit called properly
+	assert transmit_mock.call_count == 2
+	transmit_mock.assert_has_calls([
+		mock.call([1, 2, 3, 4], 'speaker1'),
+		mock.call([5, 6, 7, 8], 'speaker2')
+	])
+
+
+@mock.patch('CAT.record.transmit')
+@mock.patch('CAT.record.extract_features')
+@mock.patch('CAT.record.identify_speakers')
+def test_analyze_audio_file_no_speaker_diarization(identify_speakers_mock, extract_features_mock, transmit_mock):
+	# disable speaker diarization
+	record.SPEAKER_DIARIZATION = False
+
+	# initialize mock return values
+	identify_speakers_mock.return_value=[('file1.wav', 'speaker1'), ('file2.wav', 'speaker2')]
+	extract_features_mock.side_effect = [[1, 2, 3, 4], [5, 6, 7, 8]]
+	
+	# call function
+	dictionary = {}
+	lock = multiprocessing.Lock()
+	record.analyze_audio_file('test_file.wav', dictionary, lock)
+	
+	# test identify_speakers called properly
+	identify_speakers_mock.assert_not_called()
+	
+	# test extract_features called properly
+	extract_features_mock.assert_called_once_with('test_file.wav')
+
+	# test transmit called properly
+	transmit_mock.assert_called_once_with([1, 2, 3, 4], None)

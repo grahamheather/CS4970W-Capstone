@@ -102,7 +102,7 @@ def test_save_to_file():
 	wave_file = wave.open(path.join(get_test_recording_dir(), 'hello.wav'), 'r')
 	audio_buffer = [wave_file.readframes(record.VAD_FRAME_SIZE) for i in range( int(wave_file.getnframes() / record.VAD_FRAME_SIZE + .5) ) ]
 	file_queue = Queue()
-	record.save_to_file(audio_buffer, file_queue)
+	record.queue_audio_buffer(audio_buffer, file_queue)
 
 	assert file_queue.qsize() == 1
 	filename = file_queue.get()
