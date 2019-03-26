@@ -1,13 +1,15 @@
 import collections
 import datetime
 import os
+import uuid
 
-#from queue import Queue
+from numpy.linalg import norm
+
 # multiprocessing avoids Python's Global Interpreter Lock which
 # prevents more than one thread running at a time.
 # This allows the program to, ideally, take advantage of multiple
 # cores on the Raspberry Pi.
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, Manager, Value, Lock, Array
 
 import pyaudio
 import wave
@@ -45,8 +47,11 @@ MAX_SAMPLE_FRAMES = int(MAX_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND / VAD_FRAME_
 MAX_SILENCE_FRAMES = int(MAX_SILENCE_LENGTH * MILLISECONDS_PER_SECOND / VAD_FRAME_MS)
 
 # speaker diarization settings
-SPEAKER_DIARIZATION = True
+SPEAKER_DIARIZATION = False
 MAX_SPEAKERS = 2
+
+# speaker re-identification settings
+SPEAKER_REID_DISTANCE_THRESHOLD = 3
 
 
 def get_output_directory():
@@ -70,9 +75,32 @@ def open_stream():
 	stream.start_stream()
 	return stream
 
+def save_to_file(data):
+	''' Saves audio to a file
 
-def save_to_file(audio_buffer, file_queue):
-	''' Saves an audio buffer to a file
+		Parameters:
+			data
+				the audio to save to the file
+				type: byte string
+		Returns:
+			the filename (str)
+	'''
+
+	filename = os.path.join(get_output_directory(), "audio{}.wav".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S%f")))
+
+	# save file with unique name indicating date and time
+	wave_file = wave.open(filename, 'wb')
+	wave_file.setnchannels(NUM_CHANNELS)
+	wave_file.setsampwidth(NUM_BYTES)
+	wave_file.setframerate(RATE)
+	wave_file.writeframes(data)
+	wave_file.close()
+
+	return filename
+
+
+def queue_audio_buffer(audio_buffer, file_queue):
+	''' Saves and queues an audio buffer to a file
 
 		Parameters:
 			audio_buffer
@@ -88,15 +116,8 @@ def save_to_file(audio_buffer, file_queue):
 	# join segments of audio into a single byte string
 	data = b''.join(segment for segment in audio_buffer)
 
-	filename = os.path.join(get_output_directory(), "audio{}.wav".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S%f")))
-
-	# save file with unique name indicating date and time
-	wave_file = wave.open(filename, 'wb')
-	wave_file.setnchannels(NUM_CHANNELS)
-	wave_file.setsampwidth(NUM_BYTES)
-	wave_file.setframerate(RATE)
-	wave_file.writeframes(data)
-	wave_file.close()
+	# save byte string to a file
+	filename = save_to_file(data)
 
 	# add the new file to the processing queue
 	file_queue.put(filename)
@@ -145,7 +166,7 @@ def record(file_queue):
 			last_speech = 0 # update that speech has been detected
 			audio_buffer.append(audio) # add speech
 			if len(audio_buffer) > MAX_SAMPLE_FRAMES: # if speech buffer is getting long
-				save_to_file(audio_buffer, file_queue) # save incomplete speech sequence to file
+				queue_audio_buffer(audio_buffer, file_queue) # save incomplete speech sequence to file
 				audio_buffer = [] # and clear buffer
 		elif not last_speech == None: # otherwise if still possibily in a sequence of speech
 			last_speech += 1 # update how long it has been since last speech
@@ -154,19 +175,23 @@ def record(file_queue):
 			if last_speech > MAX_SILENCE_FRAMES: # if the pause is long enough to indicate an end to speech
 				if len(audio_buffer) - last_speech > MIN_SAMPLE_FRAMES: # only save if the detected speech is long enough
 					audio_buffer = audio_buffer[:-last_speech] # only save speech until last detected speech (discard silence)
-					save_to_file(audio_buffer, file_queue) 
+					queue_audio_buffer(audio_buffer, file_queue) 
 
 				# reset to no speech recently detected
 				audio_buffer = []
 				last_speech = None
 
 
-def analyze_audio_files(file_queue):
+def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock):
 	''' Analyzes files of audio extracting and processing speech
 
 		Parameters:
 			file_queue
 				queue to get filenames from
+			speaker_dictionary
+				dictionary to store statistics about each speaker in
+			speaker_dictionary_lock
+				a lock so that multiple processes do not try to read/write/update/delete speakers concurrently
 	'''
 
 	# analysis processes process files indefinitely
@@ -176,10 +201,86 @@ def analyze_audio_files(file_queue):
 		filename = file_queue.get()
 		
 		# process the file
-		analyze_audio_file(filename)
+		analyze_audio_file(filename, speaker_dictionary, speaker_dictionary_lock)
 
 		# delete the file
 		os.remove(filename)
+
+
+def extract_features(filename):
+	''' Extracts features from a file of audio data
+		Parameters:
+			filename
+				str, the name of the file to extract features from
+		Returns:
+			INSERT HERE
+	'''
+
+	return []
+
+def transmit(features, speaker):
+	''' Transmits features extracted from a slice of audio data
+		Parameters:
+			features
+				the features extracted
+			speaker
+				the speaker detect in the audio data
+	'''
+
+	return
+
+
+def analyze_audio_file(filename, speaker_dictionary, speaker_dictionary_lock):
+	''' Analyzes the file of audio, extracting and processing speech
+
+		Parameters:
+			filename
+				str, the name of the file to analyze
+			speaker_dictionary
+				dict, dictionary to store statistics about each speaker in
+			speaker_dictionary_lock
+				a lock so that multiple processes do not try to read/write/update/delete speakers concurrently
+
+	'''
+
+	# files to analyze
+	if SPEAKER_DIARIZATION:
+		files = identify_speakers(filename, speaker_dictionary, speaker_dictionary_lock)
+	else:
+		files = [(filename, None)]
+
+	# extract features and transmit
+	for filename, speaker in files:
+		features = extract_features(filename)
+		transmit(features, speaker)
+		#os.remove(filename)
+
+
+def identify_speakers(filename, speaker_dictionary, speaker_dictionary_lock):
+	''' Splits a single audio file by speaker and identifies speakers
+		
+		Parameters:
+			filename
+				str, the name of the file to analyze
+			speaker_dictionary
+				dict, dictionary to store statistics about each speaker in
+			speaker_dictionary_lock
+				a lock so that multiple processes do not try to read/write/update/delete speakers concurrently
+		Returns:
+			[(str, str)], list of tuples of (filename, speaker ID)
+	'''
+
+	files = []
+	segments_by_speaker, speaker_means, speaker_covariances = split_by_speaker(filename)
+	speaker_id_map = {}
+	for speaker in segments_by_speaker:
+		speaker_id_map[speaker] = identify_speaker(speaker_means[speaker, :], speaker_covariances[speaker, :, :], speaker_dictionary, speaker_dictionary_lock)
+	for speaker in segments_by_speaker:
+		for segment in segments_by_speaker[speaker]:
+			filename = save_to_file(segment)
+			files.append((filename, speaker_id_map[speaker]))
+
+	return files
 
 
 def split_by_speaker(filename):
@@ -192,13 +293,15 @@ def split_by_speaker(filename):
 		Returns:
 			{
 				speaker_id: list of windows of audio data (list of byte strings)
-			}
+			},
+			list of multi-dimensional means of the normal PDF associated with each speaker,
+			list of covariance matrices of the normal PDF associated with each speaker
 	'''
 
 	# LDA is disabled so that all speakers are analyzed in the same space
 	# and all clusters across all speaker identifications are roughly
 	# Gaussian in that space
-	speaker_detected_by_window = audioSegmentation.speakerDiarization(filename, MAX_SPEAKERS, lda_dim=0)
+	speaker_detected_by_window, speaker_means, speaker_covariances = audioSegmentation.speakerDiarization(filename, MAX_SPEAKERS, lda_dim=0)
 
 	# calculate necessary stats on labelled windows
 	WINDOW_LENGTH = .2 # in seconds
@@ -213,44 +316,140 @@ def split_by_speaker(filename):
 	previous_speaker = None
 	for window_index in range(len(speaker_detected_by_window)):
 		previous_speaker = speaker_detected_by_window[window_index - 1] if window_index > 0 else None
-		speaker = speaker_detected_by_window[window_index]
+		speaker = int(speaker_detected_by_window[window_index])
 		start_frame = LENGTH_OF_WINDOW_IN_BYTES * window_index
 		
-		# floor ceiling or round?
 		window = audio[start_frame:start_frame + LENGTH_OF_WINDOW_IN_BYTES]
 		if speaker == previous_speaker:
 			segments_by_speaker[speaker][-1] += window
 		else:
 			segments_by_speaker[speaker].append(window)
 
-	return segments_by_speaker
+	return segments_by_speaker, speaker_means, speaker_covariances
 
 
-def analyze_audio_file(filename):
-	''' Analyzes the file of audio, extracting and processing speech
+def speaker_distance(mean0, covariance0, mean1, covariance1):
+	''' Calculates the distance between two speakers
 
 		Parameters:
-			filename
-				string, the name of the file to analyze
+			mean0
+				mean of PDF 0
+			covariance0
+				covariance matrix of PDF 0
+			mean1
+				mean of PDF 1
+			covariance1
+				covariance matrix of PDF 1
+
+		Returns:
+			float, the distance
 	'''
 
-	# speaker diarization
-	if SPEAKER_DIARIZATION:
-		segments_by_speaker = split_by_speaker(filename)
+	# Note that current implementation does not use covariances
+	# Covariances are retained for ease of modification in the future
+
+	# Using Euclidean distance between means
+	return norm(mean0 - mean1)
 
 
+def add_new_speaker(audio_mean, audio_covariance, speaker_dictionary):
+	''' Utility function to add a new speaker to the dictionary
+
+		Parameters:
+			audio_mean
+				mean of the multivariate normal PDF of the new speaker
+			audio_covariance
+				covariance matrix of the multivariate normal PDF of the new speaker
+			speaker_dictionary
+				dictionary of previously recorded speakers
+				{
+					'speakerID': (mean, covariance, count)
+				}
+		Returns:
+			new speaker ID generated
+	'''
+
+	# store a new speaker
+	speaker_id = str(uuid.uuid4()) # generates a random ID, highly unlikely to be duplicated
+	speaker_dictionary[speaker_id] = (audio_mean, audio_covariance, 1)
+
+	return speaker_id
+
+
+def identify_speaker(audio_mean, audio_covariance, speaker_dictionary, speaker_dictionary_lock):
+	''' Matches a speaker in an audio file to a previously recorded
+		speaker
+
+		Parameters:
+			audio_mean
+				mean of the multivariate normal PDF of the new speaker
+			audio_covariance
+				covariance matrix of the multivariate normal PDF of the new speaker
+			speaker_dictionary
+				dictionary of previously recorded speakers
+				{
+					'speakerID': (mean, covariance, count)
+				}
+			speaker_dictionary_lock
+				a lock so that multiple processes do not try to read/write/update/delete speakers concurrently
+		Returns:
+			ID of the speaker in the audio
+	'''
+
+	speaker_dictionary_lock.acquire()
+
+	# if there are no speakers yet, add a new one
+	if len(speaker_dictionary) == 0:
+		speaker_id = add_new_speaker(audio_mean, audio_covariance, speaker_dictionary)
+
+	else:
+		# find the previously recorded speaker with the lowest distance
+		speaker_id = None
+		speaker_mean = None
+		speaker_covariance = None
+		speaker_count = None
+		distance = None
+		for temp_speaker_id, (temp_speaker_mean, temp_speaker_covariance, temp_speaker_count) in speaker_dictionary.items():
+			temp_distance = speaker_distance(temp_speaker_mean, temp_speaker_covariance, audio_mean, audio_covariance)
+			if distance == None or (not temp_distance == None and temp_distance < distance):
+				distance = temp_distance
+				speaker_id = temp_speaker_id
+				speaker_mean = temp_speaker_mean
+				speaker_covariance = temp_speaker_covariance
+				speaker_count = temp_speaker_count
+
+		if distance == None: # distance is invalid on all pairs
+			# add a new speaker
+			speaker_id = add_new_speaker(audio_mean, audio_covariance, speaker_dictionary)
+		elif distance <= SPEAKER_REID_DISTANCE_THRESHOLD:
+			# update speaker values
+			new_speaker_count = speaker_count + 1
+			new_mean = (speaker_mean * speaker_count + audio_mean) / new_speaker_count
+			new_covariance = (speaker_covariance * speaker_count + audio_covariance) / new_speaker_count
+			speaker_dictionary[speaker_id] = (new_mean, new_covariance, new_speaker_count)
+		else:
+			# or add a new speaker
+			speaker_id = add_new_speaker(audio_mean, audio_covariance, speaker_dictionary)
+
+
+	speaker_dictionary_lock.release()
+
+	return speaker_id
 
 
 def start_processes():
 	''' Starts all process of the program '''
 
+	process_manager = Manager()
+	speaker_dictionary = process_manager.dict()
+	speaker_dictionary_lock = Lock()
 	file_queue = Queue() # thread-safe FIFO queue
 
 	# ideally of the cores should run the recording process
 	# and the other cores will run the analysis processes
 	recording_process = Process(target=record, args=(file_queue,))
 	recording_process.start()
-	analysis_processes = [Process(target=analyze_audio_files, args=(file_queue,)) for _ in range(NUM_CORES - 1)]
+	analysis_processes = [Process(target=analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock)) for _ in range(NUM_CORES - 1)]
 	for process in analysis_processes:
 		process.start()
 
