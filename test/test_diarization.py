@@ -168,8 +168,8 @@ def test_split_by_speaker_single_noise(generate_audio_files):
 	assert desired_speech in segment
 
 
+# test that distance between two identical speakers is 0
 def test_speaker_distance_same():
-	# test that distance between two identical speakers is 0
 	mean = numpy.array([[1], [0], [0]])
 	covariance = numpy.array([[1, 6, 0],
 							 [6, 4, 1],
@@ -179,9 +179,9 @@ def test_speaker_distance_same():
 	assert result == 0
 
 
+# test distance an arbitrary pair of speakers
+# CURRENTLY EUCLIDEAN DISTANCE
 def test_speaker_distance_valid():
-	# test distance an arbitrary pair of speakers
-	# CURRENTLY EUCLIDEAN DISTANCE
 	mean1 = numpy.array([[1], [0]])
 	mean0 = numpy.array([[2], [0]])
 	covariance1 = [[1, 0], [0, 1]]
@@ -190,8 +190,8 @@ def test_speaker_distance_valid():
 	assert abs(result - 1) < .00001
 
 
+# test a singular matrix does not cause an error
 def test_speaker_distance_singlar():
-	# test a singular matrix does not cause an error
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 2],
 							  [2, 4]
@@ -199,8 +199,8 @@ def test_speaker_distance_singlar():
 	result = record.speaker_distance(mean, covariance, mean, covariance)
 
 
+# test that a new speaker can be added with no previous speakers
 def test_identify_speaker_empty():
-	# test that a new speaker can be added with no previous speakers
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {}
@@ -211,8 +211,8 @@ def test_identify_speaker_empty():
 	assert dictionary[result] == (mean, covariance, 1)
 
 
+# test that a speaker can be compared against previous speakers
 def test_identify_speaker_previous():
-	# check that a speaker can be compared against previous speakers
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {
@@ -237,9 +237,9 @@ def test_identify_speaker_previous():
 	assert dictionary[result][2] == 4
 
 
+# test that a speaker can be compared against previous speakers
+# including ones with singular matrices
 def test_identify_speaker_invalid_previous():
-	# check that a speaker can be compared against previous speakers
-	# including ones with singular matrices
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {
@@ -263,9 +263,9 @@ def test_identify_speaker_invalid_previous():
 	assert dictionary[result][2] == 4
 
 
+# te that a new speaker can be identified from previous speakers
+# including ones with singular matrices
 def test_identify_speaker_new():
-	# check that a new speaker can be identified from previous speakers
-	# including ones with singular matrices
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {
@@ -289,9 +289,9 @@ def test_identify_speaker_new():
 	assert dictionary[result][2] == 1
 
 
+# test that a new speaker can be identified from previous speakers
+# including ones with singular matrices	
 def test_identify_speaker_invalid_new():
-	# check that a new speaker can be identified from previous speakers
-	# including ones with singular matrices
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {
@@ -316,6 +316,7 @@ def test_identify_speaker_invalid_new():
 	assert dictionary[result][2] == 1
 
 
+# Test that a previously seen speaker can be identified in a new recording
 @pytest.mark.filterwarnings("ignore:")
 def test_identify_speakers_same_recording(generate_audio_files):
 	# The speaker diarization module is unstable.
@@ -352,6 +353,7 @@ def test_identify_speakers_same_recording(generate_audio_files):
 	assert any(runs)
 
 
+# Test differentiating a new speaker from previously seen ones in recordings
 @pytest.mark.filterwarnings("ignore:")
 def test_identify_speakers_new_speaker(generate_audio_files):
 	# The speaker diarization module is unstable.

@@ -16,6 +16,7 @@ def run_forever(arg):
 
 # TESTS
 
+# Test starting the recording and processing threads
 def test_start_processes(monkeypatch):
 	# replace the functioning of each process with incrementing a counter
 	# to track how many of each kind of process are created
@@ -56,6 +57,7 @@ def test_start_processes(monkeypatch):
 	assert analysis_process_counter.value == record.NUM_CORES - 1
 
 
+# Test analyzing audio files in processing queue
 def test_analyze_audio_files(monkeypatch):
 	processed_files = multiprocessing.Queue()
 
@@ -109,6 +111,7 @@ def test_analyze_audio_files(monkeypatch):
 		assert not os.path.isfile(filename)
 
 
+# Test analyzing a new audio file added to the processing queue
 def test_analyze_audio_files_late_add(monkeypatch):
 	# replace the audio analysis function with placing the filename that would have been processed into a queue
 	processed_files = multiprocessing.Queue()
@@ -158,6 +161,8 @@ def test_analyze_audio_files_late_add(monkeypatch):
 	for filename in filenames:
 		assert not os.path.isfile(filename)
 
+
+# Test that audio file analysis calls extracts features and transmits (with speaker diarization)
 @mock.patch('CAT.record.transmit')
 @mock.patch('CAT.record.extract_features')
 @mock.patch('CAT.record.identify_speakers')
@@ -189,6 +194,7 @@ def test_analyze_audio_file_speaker_diarization(identify_speakers_mock, extract_
 	])
 
 
+# Test that audio file analysis extracts features and transmits (without speaker diarization)
 @mock.patch('CAT.record.transmit')
 @mock.patch('CAT.record.extract_features')
 @mock.patch('CAT.record.identify_speakers')
