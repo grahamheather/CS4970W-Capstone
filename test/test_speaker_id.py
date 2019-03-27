@@ -2,6 +2,7 @@ import pytest
 
 # supporting libraries
 from os import path
+import os
 import multiprocessing
 import pickle
 
@@ -18,6 +19,9 @@ REGENERATE_FILES = False
 
 
 # UTILITY FUNCTIONS
+
+def get_recording_dir():
+	return path.join('CAT', 'recordings')
 
 def get_test_recording_dir():
 	return path.join('test', 'test_recordings')
@@ -36,6 +40,17 @@ def generate_audio_files():
 			stats = pickle.load(f)
 
 	return stats
+
+
+# remove all recordings from previous tests before each new test
+@pytest.fixture(autouse=True)
+def cleanup():
+	for filename in os.listdir(get_recording_dir()):
+		file_path = path.join(path.join(get_recording_dir(), filename))
+		try:
+			os.remove(file_path)
+		except Exception as e:
+			print(e)
 
 
 # TESTS
