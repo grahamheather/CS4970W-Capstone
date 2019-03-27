@@ -1,0 +1,114 @@
+import pytest
+
+# supporting libraries
+from os import path
+import multiprocessing
+import pickle
+
+# file under test
+from CAT import speaker_id
+
+
+# testing file generation
+import gen_audio
+
+# this process can be slow
+# it can be disabled if settings have not been changed (the necessary files are saved)
+REGENERATE_FILES = False
+
+
+# UTILITY FUNCTIONS
+
+def get_test_recording_dir():
+	return path.join('test', 'test_recordings')
+
+
+# FIXTURES
+
+@pytest.fixture(scope="session", autouse=True)
+def generate_audio_files():
+	if REGENERATE_FILES:
+		stats = gen_audio.generate_test_speaker_id_audio(get_test_recording_dir())
+		with open(path.join(get_test_recording_dir(), 'test_speaker_id_stats.pickle'), 'wb') as f:
+			pickle.dump(stats, f)
+	else:
+		with open(path.join(get_test_recording_dir(), 'test_speaker_id_stats.pickle'), 'rb') as f:
+			stats = pickle.load(f)
+
+	return stats
+
+
+# TESTS
+
+# Test that a previously seen speaker can be identified in a new recording
+@pytest.mark.filterwarnings("ignore:")
+def test_identify_speakers_same_recording(generate_audio_files):
+	# The speaker diarization module is unstable.
+	# It is provided as an extra feature to be improved and developed upon.
+	# As such the realistic tests for it are equally unstable.
+	# Prior tests guarantee that the code functions apporpriately in simplistic cases.
+	# These tests check that the entire section is assembled properly and can return the correct answers.
+	# Multiple runs are calculated to ensure that the tests should (almost) always pass.
+	runs = []
+	for _ in range(5):
+		tests = []
+
+		filename = path.join(get_test_recording_dir(), "speaker_id_same_recording.wav")
+		dictionary = {}
+		lock = multiprocessing.Lock()
+
+		# check that the first new speaker is identified properly
+		result1 = speaker_id.identify_speakers(filename, dictionary, lock)
+		speakers1 = set(speaker for file, speaker in result1)
+		tests.append(len(dictionary) == 1)
+		tests.append(len(speakers1) == 1)
+		tests.append(list(dictionary.keys())[0] in speakers1)
+
+		# check that that speaker is re-identified propery as well
+		# (in an identical recording)
+		result = speaker_id.identify_speakers(filename, dictionary, lock)
+		speakers = set(speaker for file, speaker in result)
+		tests.append(len(dictionary) == 1)
+		tests.append(len(speakers) == 1)
+		tests.append(list(dictionary.keys())[0] in speakers)
+
+		runs.append(all(tests))
+
+	assert any(runs)
+
+
+# Test differentiating a new speaker from previously seen ones in recordings
+@pytest.mark.filterwarnings("ignore:")
+def test_identify_speakers_new_speaker(generate_audio_files):
+	# The speaker diarization module is unstable.
+	# It is provided as an extra feature to be improved and developed upon.
+	# As such the realistic tests for it are equally unstable.
+	# Prior tests guarantee that the code functions apporpriately in simplistic cases.
+	# These tests check that the entire section is assembled properly and can return the correct answers.
+	# Multiple runs are calculated to ensure that the tests should (almost) always pass.
+	runs = []
+	for _ in range(5):
+		tests = []
+
+		filename1 = path.join(get_test_recording_dir(), "speaker_id_same_recording.wav")
+		filename2 = path.join(get_test_recording_dir(), "speaker_id_two_speakers.wav")
+		dictionary = {}
+		lock = multiprocessing.Lock()
+
+		# check that the first new speaker is identified properly
+		result1 = speaker_id.identify_speakers(filename1, dictionary, lock)
+		speakers1 = set(speaker for file, speaker in result1)
+		tests.append(len(dictionary) == 1)
+		tests.append(len(speakers1) == 1)
+		tests.append(list(dictionary.keys())[0] in speakers1)
+
+		# check that that speaker is re-identified propery as well
+		# (in an identical recording)
+		result2 = speaker_id.identify_speakers(filename2, dictionary, lock)
+		speakers2 = set(speaker for file, speaker in result2)
+		tests.append(len(dictionary) == 2)
+		tests.append(len(speakers2) == 2)
+		tests.append(any(speaker in speakers1 for speaker in speakers2))
+
+		runs.append(all(tests))
+	assert any(runs)

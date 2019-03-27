@@ -322,7 +322,17 @@ def generate_diarization_single_noise(filename):
 	return (start, end)
 
 
-def generate_diarization_same_recording(filename):
+def generate_test_diarization_audio(folder):
+	stats = {}
+	stats["normal"] = generate_diarization_normal(path.join(folder, "diarization_normal.wav"))
+	stats["noise"] = generate_diarization_noise(path.join(folder, "diarization_noise.wav"))
+	stats["single"] = generate_diarization_single(path.join(folder, "diarization_single.wav"))
+	stats["single_noise"] = generate_diarization_single_noise(path.join(folder, "diarization_single_noise.wav"))
+
+	return stats
+
+
+def generate_speaker_id_same_recording(filename):
 	file_path, file_extension = path.splitext(filename)
 
 	# generate text-to-speech
@@ -332,7 +342,7 @@ def generate_diarization_same_recording(filename):
 	speech.export(filename, format="wav")
 
 
-def generate_diarization_two_speakers(filename):
+def generate_speaker_id_two_speakers(filename):
 	file_path, file_extension = path.splitext(filename)
 
 	# generate text-to-speech
@@ -347,13 +357,6 @@ def generate_diarization_two_speakers(filename):
 	audio.export(filename, format="wav")
 
 
-def generate_test_diarization_audio(folder):
-	stats = {}
-	stats["normal"] = generate_diarization_normal(path.join(folder, "diarization_normal.wav"))
-	stats["noise"] = generate_diarization_noise(path.join(folder, "diarization_noise.wav"))
-	stats["single"] = generate_diarization_single(path.join(folder, "diarization_single.wav"))
-	stats["single_noise"] = generate_diarization_single_noise(path.join(folder, "diarization_single_noise.wav"))
-	generate_diarization_same_recording(path.join(folder, "diarization_same_recording.wav"))
-	generate_diarization_two_speakers(path.join(folder, "diarization_two_speakers.wav"))
-
-	return stats
+def generate_test_speaker_id_audio(folder):
+	generate_speaker_id_same_recording(path.join(folder, "speaker_id_same_recording.wav"))
+	generate_speaker_id_two_speakers(path.join(folder, "speaker_id_two_speakers.wav"))

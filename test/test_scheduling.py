@@ -4,8 +4,10 @@ import multiprocessing
 import time
 import os
 
+from CAT import settings
 
-from CAT import record
+# file under test
+from CAT import scheduling
 
 # UTILITY FUNCTION
 
@@ -30,7 +32,7 @@ def test_start_processes(monkeypatch):
 		with recording_process_counter.get_lock():
 			recording_process_counter.value += 1
 
-	monkeypatch.setattr(record, "record", increment_recording_process_counter)
+	monkeypatch.setattr("CAT.scheduling.record.record", increment_recording_process_counter)
 	
 	# analysis Processes
 	global analysis_process_counter
@@ -44,17 +46,17 @@ def test_start_processes(monkeypatch):
 		with analysis_process_counter.get_lock():
 			analysis_process_counter.value += 1
 
-	monkeypatch.setattr(record, "analyze_audio_files", increment_analysis_process_counter)
+	monkeypatch.setattr(scheduling, "analyze_audio_files", increment_analysis_process_counter)
 	
 	# start the Process creation function
-	record.start_processes()
+	scheduling.start_processes()
 
 	# give the Processes plenty of time to start and increment their counters
 	time.sleep(1)
 	
 	# check that the proper number of processes have been created
 	assert recording_process_counter.value == 1
-	assert analysis_process_counter.value == record.NUM_CORES - 1
+	assert analysis_process_counter.value == settings.NUM_CORES - 1
 
 
 # Test analyzing audio files in processing queue
@@ -67,7 +69,7 @@ def test_analyze_audio_files(monkeypatch):
 		assert type(speaker_dictionary) == multiprocessing.managers.DictProxy
 		assert type(speaker_dictionary_lock) == multiprocessing.synchronize.Lock
 		processed_files.put(filename)
-	monkeypatch.setattr(record, "analyze_audio_file", analyze_audio_file_mock)
+	monkeypatch.setattr(scheduling, "analyze_audio_file", analyze_audio_file_mock)
 
 	# initialize a list of files to process
 	file_queue = multiprocessing.Queue()
@@ -89,7 +91,7 @@ def test_analyze_audio_files(monkeypatch):
 	speaker_dictionary_lock = multiprocessing.Lock()
 
 	# start the audio analysis Process
-	process = multiprocessing.Process(target=record.analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock))
+	process = multiprocessing.Process(target=scheduling.analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock))
 	process.start()
 
 	# give the Process sufficient time to iterate over all files
@@ -115,7 +117,7 @@ def test_analyze_audio_files(monkeypatch):
 def test_analyze_audio_files_late_add(monkeypatch):
 	# replace the audio analysis function with placing the filename that would have been processed into a queue
 	processed_files = multiprocessing.Queue()
-	monkeypatch.setattr(record, "analyze_audio_file", lambda filename, _, __: processed_files.put(filename))
+	monkeypatch.setattr(scheduling, "analyze_audio_file", lambda filename, _, __: processed_files.put(filename))
 
 	# initialize an empty queue of files
 	file_queue = multiprocessing.Queue()
@@ -126,7 +128,7 @@ def test_analyze_audio_files_late_add(monkeypatch):
 	speaker_dictionary_lock = multiprocessing.Lock()
 
 	# start the audio analysis Process
-	process = multiprocessing.Process(target=record.analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock))
+	process = multiprocessing.Process(target=scheduling.analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock))
 	process.start()
 
 	# wait a small amount of time
@@ -163,12 +165,12 @@ def test_analyze_audio_files_late_add(monkeypatch):
 
 
 # Test that audio file analysis calls extracts features and transmits (with speaker diarization)
-@mock.patch('CAT.record.transmit')
-@mock.patch('CAT.record.extract_features')
-@mock.patch('CAT.record.identify_speakers')
+@mock.patch('CAT.scheduling.transmission.transmit')
+@mock.patch('CAT.scheduling.feature_extraction.extract_features')
+@mock.patch('CAT.scheduling.speaker_id.identify_speakers')
 def test_analyze_audio_file_speaker_diarization(identify_speakers_mock, extract_features_mock, transmit_mock):
 	# enable speaker diarization
-	record.SPEAKER_DIARIZATION = True
+	scheduling.SPEAKER_DIARIZATION = True
 
 	# initialize mock return values
 	identify_speakers_mock.return_value=[('file1.wav', 'speaker1'), ('file2.wav', 'speaker2')]
@@ -177,7 +179,7 @@ def test_analyze_audio_file_speaker_diarization(identify_speakers_mock, extract_
 	# call function
 	dictionary = {}
 	lock = multiprocessing.Lock()
-	record.analyze_audio_file('test_file.wav', dictionary, lock)
+	scheduling.analyze_audio_file('test_file.wav', dictionary, lock)
 	
 	# test identify_speakers called properly
 	identify_speakers_mock.assert_called_once_with('test_file.wav', dictionary, lock)
@@ -195,12 +197,12 @@ def test_analyze_audio_file_speaker_diarization(identify_speakers_mock, extract_
 
 
 # Test that audio file analysis extracts features and transmits (without speaker diarization)
-@mock.patch('CAT.record.transmit')
-@mock.patch('CAT.record.extract_features')
-@mock.patch('CAT.record.identify_speakers')
+@mock.patch('CAT.scheduling.transmission.transmit')
+@mock.patch('CAT.scheduling.feature_extraction.extract_features')
+@mock.patch('CAT.scheduling.speaker_id.identify_speakers')
 def test_analyze_audio_file_no_speaker_diarization(identify_speakers_mock, extract_features_mock, transmit_mock):
 	# disable speaker diarization
-	record.SPEAKER_DIARIZATION = False
+	scheduling.SPEAKER_DIARIZATION = False
 
 	# initialize mock return values
 	identify_speakers_mock.return_value=[('file1.wav', 'speaker1'), ('file2.wav', 'speaker2')]
@@ -209,7 +211,7 @@ def test_analyze_audio_file_no_speaker_diarization(identify_speakers_mock, extra
 	# call function
 	dictionary = {}
 	lock = multiprocessing.Lock()
-	record.analyze_audio_file('test_file.wav', dictionary, lock)
+	scheduling.analyze_audio_file('test_file.wav', dictionary, lock)
 	
 	# test identify_speakers called properly
 	identify_speakers_mock.assert_not_called()
