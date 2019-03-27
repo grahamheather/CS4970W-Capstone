@@ -36,6 +36,10 @@ def analyze_audio_file(filename, speaker_dictionary, speaker_dictionary_lock):
 	for filename, speaker in files:
 		features = feature_extraction.extract_features(filename)
 		transmission.transmit(features, speaker)
+		
+		# if speaker diarization was used, new subfiles have been created and need to be removed
+		if SPEAKER_DIARIZATION:
+			os.remove(filename)
 
 
 def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock):

@@ -165,10 +165,11 @@ def test_analyze_audio_files_late_add(monkeypatch):
 
 
 # Test that audio file analysis calls extracts features and transmits (with speaker diarization)
+@mock.patch('CAT.scheduling.os.remove')
 @mock.patch('CAT.scheduling.transmission.transmit')
 @mock.patch('CAT.scheduling.feature_extraction.extract_features')
 @mock.patch('CAT.scheduling.speaker_id.identify_speakers')
-def test_analyze_audio_file_speaker_diarization(identify_speakers_mock, extract_features_mock, transmit_mock):
+def test_analyze_audio_file_speaker_diarization(identify_speakers_mock, extract_features_mock, transmit_mock, remove_mock):
 	# enable speaker diarization
 	scheduling.SPEAKER_DIARIZATION = True
 
@@ -195,12 +196,20 @@ def test_analyze_audio_file_speaker_diarization(identify_speakers_mock, extract_
 		mock.call([5, 6, 7, 8], 'speaker2')
 	])
 
+	# test files removed properly
+	assert remove_mock.call_count == 2
+	remove_mock.assert_has_calls([
+		mock.call('file1.wav'),
+		mock.call('file2.wav')
+	])
+
 
 # Test that audio file analysis extracts features and transmits (without speaker diarization)
+@mock.patch('CAT.scheduling.os.remove')
 @mock.patch('CAT.scheduling.transmission.transmit')
 @mock.patch('CAT.scheduling.feature_extraction.extract_features')
 @mock.patch('CAT.scheduling.speaker_id.identify_speakers')
-def test_analyze_audio_file_no_speaker_diarization(identify_speakers_mock, extract_features_mock, transmit_mock):
+def test_analyze_audio_file_no_speaker_diarization(identify_speakers_mock, extract_features_mock, transmit_mock, remove_mock):
 	# disable speaker diarization
 	scheduling.SPEAKER_DIARIZATION = False
 
@@ -221,3 +230,6 @@ def test_analyze_audio_file_no_speaker_diarization(identify_speakers_mock, extra
 
 	# test transmit called properly
 	transmit_mock.assert_called_once_with([1, 2, 3, 4], None)
+
+	# test that no additional files were removed
+	remove_mock.assert_not_called()
