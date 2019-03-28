@@ -1,10 +1,12 @@
 import pytest
+import unittest.mock as mock
 
 # supporting libraries
 from os import path
 import os
 import multiprocessing
 import pickle
+import numpy
 
 # file under test
 from CAT import speaker_id
@@ -127,3 +129,26 @@ def test_identify_speakers_new_speaker(generate_audio_files):
 
 		runs.append(all(tests))
 	assert any(runs)
+
+
+# Test differentiating a speakers and running out of disk space
+@mock.patch("CAT.speaker_id.speaker_reid.identify_speaker")
+@mock.patch("CAT.speaker_id.diarization.split_by_speaker")
+@mock.patch("CAT.speaker_id.utilities.save_to_file")
+@pytest.mark.filterwarnings("ignore:")
+def test_identify_speakers_new_speaker(save_mock, split_mock, identify_mock, generate_audio_files):
+	# random audio data
+	noise = generate_audio_files["noise"]
+
+	# set up mocks
+	means = numpy.zeros((3, 5))
+	covariances = numpy.zeros((3, 5, 5))
+	split_mock.return_value = ({0: [noise], 1:[noise], 2:[noise]}, means, covariances)
+	identify_mock.return_value = 'a'
+	save_mock.side_effect = ['test1.wav', IOError(), 'test2.wav']
+
+	# run function
+	result = speaker_id.identify_speakers('test.wav', {}, None)
+
+	# check that only the appropriate files were listed
+	assert result == [('test1.wav', 'a'), ('test2.wav', 'a')]

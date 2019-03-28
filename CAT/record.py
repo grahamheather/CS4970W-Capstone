@@ -39,8 +39,11 @@ def queue_audio_buffer(audio_buffer, file_queue):
 	# join segments of audio into a single byte string
 	data = b''.join(segment for segment in audio_buffer)
 
-	# save byte string to a file
-	filename = utilities.save_to_file(data)
+	try:
+		# save byte string to a file
+		filename = utilities.save_to_file(data)
+	except IOError:
+		return
 
 	# add the new file to the processing queue
 	file_queue.put(filename)

@@ -6,6 +6,9 @@ MILLISECONDS_PER_SECOND = 1000
 # hardware specs
 NUM_CORES = 4
 
+# audio storage settings
+MIN_EMPTY_SPACE_IN_BYTES = 7064096
+
 # audio recording settings
 VAD_LEVEL = 2 # "integer between 0 and 3. 0 is the least aggressive about filtering out non-speech, 3 is the most aggressive." -py-webrtcvad docs
 FORMAT = pyaudio.paInt16 # WebRTC VAD only accepts 16-bit audio

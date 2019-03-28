@@ -1,9 +1,12 @@
 import pytest
+import unittest.mock as mock
 
 # supporting libraries
 from os import path
 import os
 import pickle
+
+from CAT.settings import *
 
 # file under test
 from CAT import utilities
@@ -14,7 +17,7 @@ import gen_audio
 
 # this process can be slow
 # it can be disabled if settings have not been changed (the necessary files are saved)
-REGENERATE_FILES = True
+REGENERATE_FILES = False
 
 
 # UTILITY FUNCTIONS
@@ -55,12 +58,12 @@ def cleanup():
 # test reading an audio file
 def test_read_file_exists(generate_audio_files):
 	# test reading the file
-	result1 = utilities.read_file(path.join(get_test_recording_dir(), 'read_file.wav'))
+	result1 = utilities.read_file(path.join(get_test_recording_dir(), 'utilities_read_file.wav'))
 	data = generate_audio_files['read_file']
 	assert data == result1
 
 	# test reading the file again, to be sure it has not been corrupted
-	result2 = utilities.read_file(path.join(get_test_recording_dir(), 'read_file.wav'))
+	result2 = utilities.read_file(path.join(get_test_recording_dir(), 'utilities_read_file.wav'))
 	assert data == result2
 
 
@@ -71,8 +74,19 @@ def test_read_file_not_exists():
 
 
 # test that a file can be written
-def test_write_file(generate_audio_files):
+def test_save_to_file(generate_audio_files):
 	data = generate_audio_files['read_file']
 	result = utilities.save_to_file(data)
 	written_data = utilities.read_file(result)
 	assert data == written_data
+
+
+# test that a file is not written with the disk is almost full
+@mock.patch("CAT.utilities.shutil.disk_usage")
+def test_save_to_file_no_space(usage_mock, generate_audio_files):
+	usage_mock.return_value = (MIN_EMPTY_SPACE_IN_BYTES * 2,  MIN_EMPTY_SPACE_IN_BYTES + 1, MIN_EMPTY_SPACE_IN_BYTES - 1)
+	data = generate_audio_files['read_file']
+	with pytest.raises(IOError):
+		result = utilities.save_to_file(data)
+	assert len(os.listdir(get_recording_dir())) == 0
+

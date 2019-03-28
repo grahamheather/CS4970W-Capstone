@@ -1,3 +1,4 @@
+import shutil
 import os
 import datetime
 import wave
@@ -37,6 +38,11 @@ def save_to_file(data):
 		Returns:
 			the filename (str)
 	'''
+
+	total_bytes, used_bytes, free_bytes = shutil.disk_usage(get_output_directory())
+
+	if free_bytes < MIN_EMPTY_SPACE_IN_BYTES:
+		raise IOError
 
 	filename = os.path.join(get_output_directory(), "audio{}.wav".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S%f")))
 

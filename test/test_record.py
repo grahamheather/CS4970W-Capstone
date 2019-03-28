@@ -1,4 +1,6 @@
 import pytest
+import unittest.mock as mock
+
 
 # supporting libraries
 import pickle
@@ -114,9 +116,21 @@ def test_queue_audio_buffer():
 	saved_file = read_wav(path.join(get_recording_dir(), os.listdir(get_recording_dir())[0]))
 	wave_file.rewind()
 	assert saved_file == wave_file.readframes(wave_file.getnframes())
-	
 
-# test saving a file if the disk is full
+
+@mock.patch('CAT.record.utilities.save_to_file')
+def test_queue_audio_buffer_error(save_mock):
+	# set up mock
+	save_mock.side_effect = IOError()
+
+	# attempt to queue the audio buffer
+	wave_file = wave.open(path.join(get_test_recording_dir(), 'hello.wav'), 'r')
+	audio_buffer = [wave_file.readframes(settings.VAD_FRAME_SIZE) for i in range( int(wave_file.getnframes() / settings.VAD_FRAME_SIZE + .5) ) ]
+	file_queue = Queue()
+	record.queue_audio_buffer(audio_buffer, file_queue)
+
+	# check that the buffer was not queued
+	assert file_queue.qsize() == 0
 
 
 # test that feeding only silence will not save a file
