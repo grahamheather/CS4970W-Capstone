@@ -17,9 +17,13 @@ def read_file(filename):
 			byte strings
 	'''
 
-	wave_file = wave.open(filename, 'rb')
-	audio = wave_file.readframes(wave_file.getnframes())
-	wave_file.close()
+	try:
+		wave_file = wave.open(filename, 'rb')
+		audio = wave_file.readframes(wave_file.getnframes())
+		wave_file.close()
+	except FileNotFoundError:
+		audio = b''
+		
 	return audio
 
 

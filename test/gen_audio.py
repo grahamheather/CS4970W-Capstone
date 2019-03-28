@@ -360,3 +360,23 @@ def generate_speaker_id_two_speakers(filename):
 def generate_test_speaker_id_audio(folder):
 	generate_speaker_id_same_recording(path.join(folder, "speaker_id_same_recording.wav"))
 	generate_speaker_id_two_speakers(path.join(folder, "speaker_id_two_speakers.wav"))
+
+
+def generate_read_file_audio(filename):
+	duration_in_ms = 20
+
+	# generate noise
+	noise = WhiteNoise(sample_rate=RATE, bit_depth=NUM_BYTES*BITS_PER_BYTE).to_audio_segment(duration=duration_in_ms)
+
+	# save
+	noise.export(filename, format="wav")
+
+	return noise._data
+
+
+def generate_test_utilities_audio(folder):
+	stats = {}
+	stats["read_file"] = generate_read_file_audio(path.join(folder, "read_file.wav"))
+
+	return stats
+
