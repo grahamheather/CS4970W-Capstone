@@ -1,3 +1,4 @@
+import datetime
 import uuid
 from numpy.linalg import norm
 from CAT.settings import *
@@ -38,7 +39,7 @@ def add_new_speaker(audio_mean, audio_covariance, speaker_dictionary):
 			speaker_dictionary
 				dictionary of previously recorded speakers
 				{
-					'speakerID': (mean, covariance, count)
+					'speakerID': (mean, covariance, count, last seen)
 				}
 		Returns:
 			new speaker ID generated
@@ -46,7 +47,7 @@ def add_new_speaker(audio_mean, audio_covariance, speaker_dictionary):
 
 	# store a new speaker
 	speaker_id = str(uuid.uuid4()) # generates a random ID, highly unlikely to be duplicated
-	speaker_dictionary[speaker_id] = (audio_mean, audio_covariance, 1)
+	speaker_dictionary[speaker_id] = (audio_mean, audio_covariance, 1, datetime.datetime.now())
 
 	return speaker_id
 
@@ -63,7 +64,7 @@ def identify_speaker(audio_mean, audio_covariance, speaker_dictionary, speaker_d
 			speaker_dictionary
 				dictionary of previously recorded speakers
 				{
-					'speakerID': (mean, covariance, count)
+					'speakerID': (mean, covariance, count, last seen)
 				}
 			speaker_dictionary_lock
 				a lock so that multiple processes do not try to read/write/update/delete speakers concurrently
@@ -84,7 +85,7 @@ def identify_speaker(audio_mean, audio_covariance, speaker_dictionary, speaker_d
 		speaker_covariance = None
 		speaker_count = None
 		distance = None
-		for temp_speaker_id, (temp_speaker_mean, temp_speaker_covariance, temp_speaker_count) in speaker_dictionary.items():
+		for temp_speaker_id, (temp_speaker_mean, temp_speaker_covariance, temp_speaker_count, temp_speaker_last_seen) in speaker_dictionary.items():
 			temp_distance = speaker_distance(temp_speaker_mean, temp_speaker_covariance, audio_mean, audio_covariance)
 			if distance == None or (not temp_distance == None and temp_distance < distance):
 				distance = temp_distance
@@ -101,10 +102,23 @@ def identify_speaker(audio_mean, audio_covariance, speaker_dictionary, speaker_d
 			new_speaker_count = speaker_count + 1
 			new_mean = (speaker_mean * speaker_count + audio_mean) / new_speaker_count
 			new_covariance = (speaker_covariance * speaker_count + audio_covariance) / new_speaker_count
-			speaker_dictionary[speaker_id] = (new_mean, new_covariance, new_speaker_count)
+			speaker_dictionary[speaker_id] = (new_mean, new_covariance, new_speaker_count, datetime.datetime.now())
 		else:
 			# or add a new speaker
 			speaker_id = add_new_speaker(audio_mean, audio_covariance, speaker_dictionary)
+
+		# remove not recently seen speakers
+		for speaker in list(speaker_dictionary.keys()):
+			if datetime.datetime.now() - speaker_dictionary[speaker][3] > SPEAKER_FORGET_INTERVAL:
+				speaker_dictionary.pop(speaker, None)
+
+		# if there are too many speakers, remove rarely occuring ones
+		while len(speaker_dictionary) > MAX_NUMBER_OF_SPEAKERS:
+			deleted = speaker_dictionary.pop(
+				min(speaker_dictionary, key=lambda key: speaker_dictionary.get(key)[2]),
+				None
+			)
+
 
 	speaker_dictionary_lock.release()
 
