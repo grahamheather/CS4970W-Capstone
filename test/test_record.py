@@ -118,6 +118,7 @@ def test_queue_audio_buffer():
 	assert saved_file == wave_file.readframes(wave_file.getnframes())
 
 
+# test attempting to save a file whe out of disk space
 @mock.patch('CAT.record.utilities.save_to_file')
 def test_queue_audio_buffer_error(save_mock):
 	# set up mock

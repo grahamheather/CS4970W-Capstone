@@ -136,7 +136,7 @@ def test_identify_speakers_new_speaker(generate_audio_files):
 @mock.patch("CAT.speaker_id.diarization.split_by_speaker")
 @mock.patch("CAT.speaker_id.utilities.save_to_file")
 @pytest.mark.filterwarnings("ignore:")
-def test_identify_speakers_new_speaker(save_mock, split_mock, identify_mock, generate_audio_files):
+def test_identify_speakers_no_space(save_mock, split_mock, identify_mock, generate_audio_files):
 	# random audio data
 	noise = generate_audio_files["noise"]
 
