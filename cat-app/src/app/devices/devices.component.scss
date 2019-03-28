@@ -35,7 +35,7 @@
         flex: 0 1 100%;
     }
 
-    mat-card-actions {
+    .device-card-actions, .settings-card-actions {
         flex: 1 0 auto;
         display: flex;
         align-items: center;
@@ -50,8 +50,4 @@
     position: fixed;
     bottom: 0;
     z-index: 1000;
-}
-
-.spacer {
-    flex: 0 1 100%;
 }

@@ -17,6 +17,11 @@ import { AddDeviceSheetComponent } from './add-device-sheet/add-device-sheet.com
 import { DevicesService } from './services/devices.service';
 import { HttpClientModule } from '@angular/common/http';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { FormsModule } from '@angular/forms';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatMomentDateModule, MAT_MOMENT_DATE_ADAPTER_OPTIONS } from '@angular/material-moment-adapter';
 
 @NgModule({
   declarations: [
@@ -36,12 +41,20 @@ import { MatDividerModule } from '@angular/material/divider';
     MatMenuModule,
     MatBottomSheetModule,
     HttpClientModule,
-    MatDividerModule
+    MatDividerModule,
+    MatFormFieldModule,
+    MatInputModule,
+    FormsModule,
+    MatDatepickerModule,
+    MatMomentDateModule
   ],
   entryComponents: [
     AddDeviceSheetComponent
   ],
-  providers: [DevicesService],
+  providers: [
+    DevicesService,
+    { provide: MAT_MOMENT_DATE_ADAPTER_OPTIONS, useValue: { useUtc: true } }
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

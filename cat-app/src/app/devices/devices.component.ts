@@ -6,6 +6,7 @@ import { Device } from '../models/device';
 import { Observable } from 'rxjs';
 import { DeviceCard } from '../models/device-card';
 import { map } from 'rxjs/operators';
+import { Moment } from 'moment';
 
 @Component({
   selector: 'app-devices',
@@ -13,6 +14,7 @@ import { map } from 'rxjs/operators';
   styleUrls: ['./devices.component.scss']
 })
 export class DevicesComponent implements OnInit {
+  private readonly ipv4Pattern: string = "\\b(?:(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9]))\\b";
 
   deviceCards$: Observable<DeviceCard[]>;
 
@@ -49,11 +51,53 @@ export class DevicesComponent implements OnInit {
     });
   }
 
+  private setDate(moment: Moment, date: Date): void {
+    date.setUTCDate(moment.date());
+    date.setUTCMonth(moment.month());
+    date.setUTCFullYear(moment.year());
+  }
+
+  private setTime(time: string, date: Date): void {
+    date.setUTCHours(Number.parseInt(time.substring(0, 2)));
+    date.setUTCMinutes(Number.parseInt(time.substring(3, 5)));
+    date.setUTCSeconds(Number.parseInt(time.substring(6, 8)));
+  }
+
+  private getUtcTime(date: Date): string {
+    const hours = this.zeroPadNumber(date.getUTCHours(), 2);
+    const mins = this.zeroPadNumber(date.getUTCMinutes(), 2);
+    const secs = this.zeroPadNumber(date.getUTCSeconds(), 2);
+    const mils = this.zeroPadNumber(date.getUTCMilliseconds(), 3);
+    return `${hours}:${mins}:${secs}.${mils}`;
+  }
+
+  private zeroPadNumber(number: number, digits: number): string {
+    let padded: string = "";
+    for(let i = 0; i < digits; i++) {
+      if(number < 10 * i) {
+        padded += "0";
+      }
+    }
+    return padded + number.toString();
+  }
+
   private showSettings(card: DeviceCard): void {
     card.showSettings = true;
   }
 
   private hideSettings(card: DeviceCard): void {
     card.showSettings = false;
+  }
+
+  private beginEdit(card: DeviceCard): void {
+    card.editing = {
+      ...card,
+      device: {
+        ...card.device,
+        settings: {
+          ...card.device.settings
+        }
+      }
+    }
   }
 }
