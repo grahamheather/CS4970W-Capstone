@@ -1,4 +1,5 @@
 import pyaudio
+import datetime
 
 # universal constants
 MILLISECONDS_PER_SECOND = 1000
@@ -37,3 +38,5 @@ MAX_SPEAKERS = 2
 
 # speaker re-identification settings
 SPEAKER_REID_DISTANCE_THRESHOLD = 3
+SPEAKER_FORGET_INTERVAL = datetime.timedelta(days=14)
+MAX_NUMBER_OF_SPEAKERS = 10
