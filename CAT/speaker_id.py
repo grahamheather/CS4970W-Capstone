@@ -25,7 +25,10 @@ def identify_speakers(filename, speaker_dictionary, speaker_dictionary_lock):
 		speaker_id_map[speaker] = speaker_reid.identify_speaker(speaker_means[speaker, :], speaker_covariances[speaker, :, :], speaker_dictionary, speaker_dictionary_lock)
 	for speaker in segments_by_speaker:
 		for segment in segments_by_speaker[speaker]:
-			filename = utilities.save_to_file(segment)
+			try:
+				filename = utilities.save_to_file(segment)
+			except IOError:
+				continue
 			files.append((filename, speaker_id_map[speaker]))
 
 	return files
