@@ -8,6 +8,8 @@ from os import path
 import os
 from queue import Queue
 
+from CAT import settings
+
 # file under test
 from CAT import record
 
@@ -95,14 +97,14 @@ def cleanup():
 def test_open_stream():
 	result = record.open_stream()
 	assert type(result) == pyaudio.Stream
-	
+
 
 # test saving to file
-def test_save_to_file():
+def test_queue_audio_buffer():
 	wave_file = wave.open(path.join(get_test_recording_dir(), 'hello.wav'), 'r')
-	audio_buffer = [wave_file.readframes(record.VAD_FRAME_SIZE) for i in range( int(wave_file.getnframes() / record.VAD_FRAME_SIZE + .5) ) ]
+	audio_buffer = [wave_file.readframes(settings.VAD_FRAME_SIZE) for i in range( int(wave_file.getnframes() / settings.VAD_FRAME_SIZE + .5) ) ]
 	file_queue = Queue()
-	record.save_to_file(audio_buffer, file_queue)
+	record.queue_audio_buffer(audio_buffer, file_queue)
 
 	assert file_queue.qsize() == 1
 	filename = file_queue.get()
@@ -112,7 +114,7 @@ def test_save_to_file():
 	saved_file = read_wav(path.join(get_recording_dir(), os.listdir(get_recording_dir())[0]))
 	wave_file.rewind()
 	assert saved_file == wave_file.readframes(wave_file.getnframes())
-
+	
 
 # test saving a file if the disk is full
 
@@ -187,11 +189,11 @@ def test_pauses(generate_audio_files, mock_stream):
 	recording2 = read_wav(path.join(get_recording_dir(), files[1]))
 	original = read_wav(path.join(get_test_recording_dir(), 'star.wav'))
 	((start1, end1), (start2, end2)) = generate_audio_files["star"]
-	desired_speech1 = original[start1 + 5000:end1 - 5000]
-	desired_speech2 = original[start2 + 20000:end2 - 20000]
+	desired_speech1 = original[start1 + 1000:end1 - 1000]
+	desired_speech2 = original[start2 + 5000:end2 - 20000]
 	assert desired_speech1 in recording1
 	assert desired_speech2 in recording2
-	assert (len(recording1) - len(desired_speech1)) / (record.NUM_BYTES * record.RATE) < .5
+	assert (len(recording1) - len(desired_speech1)) / (record.NUM_BYTES * record.RATE) < 1.5
 	assert (len(recording2) - len(desired_speech2)) / (record.NUM_BYTES * record.RATE) < .5
 
 
@@ -216,7 +218,7 @@ def test_multivoice(generate_audio_files, mock_stream):
 	recording = read_wav(path.join(get_recording_dir(), os.listdir(get_recording_dir())[0]))
 	original = read_wav(path.join(get_test_recording_dir(), 'hello+como.wav'))
 	start, end = generate_audio_files["multivoice"]
-	desired_speech = original[start + 10000:end - 10000]
+	desired_speech = original[start + 9000:end - 9000]
 	assert desired_speech in recording
 	assert (len(recording) - len(desired_speech)) / (record.NUM_BYTES * record.RATE) < .5
 
@@ -229,6 +231,6 @@ def test_multivoice_noise(generate_audio_files, mock_stream):
 	recording = read_wav(path.join(get_recording_dir(), os.listdir(get_recording_dir())[0]))
 	original = read_wav(path.join(get_test_recording_dir(), 'hello+como_noise.wav'))
 	start, end = generate_audio_files["multivoice_noise"]
-	desired_speech = original[start + 10000:end - 10000]
+	desired_speech = original[start + 15000:end - 15000]
 	assert desired_speech in recording
 	assert (len(recording) - len(desired_speech)) / (record.NUM_BYTES * record.RATE) < .5
