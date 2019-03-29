@@ -1,31 +1,54 @@
 <div class="devices-root">
   <div class="devices-container">
-    <mat-card class="device-card" *ngFor="let card of deviceCards$ | async">
-      <mat-card-header *ngIf="!card.editing || card.showSettings">
-        <mat-icon mat-card-avatar *ngIf="!card.showSettings">perm_device_information</mat-icon>
-        <mat-icon mat-card-avatar *ngIf="card.showSettings">settings</mat-icon>
-        <mat-card-title>{{card.device.handle}}</mat-card-title>
-        <mat-card-subtitle>{{card.device.description}}</mat-card-subtitle>
-      </mat-card-header>
-      <mat-card-content class="device-card-content" *ngIf="!card.showSettings">
-        <mat-list *ngIf="!card.editing">
-          <mat-list-item *ngIf="card.device.createdDate">
-            <mat-icon mat-list-icon>today</mat-icon>
-            <span>{{formatDate(card.device.createdDate)}}</span>
-          </mat-list-item>
-          <mat-list-item *ngIf="card.device.location">
-            <mat-icon mat-list-icon>place</mat-icon>
-            <span>{{card.device.location}}</span>
-          </mat-list-item>
-          <mat-list-item *ngIf="card.device.ipAddress">
-            <mat-icon mat-list-icon>language</mat-icon>
-            <span>{{card.device.ipAddress}}</span>
-          </mat-list-item>
-        </mat-list>
-        <form name="editDeviceForm" *ngIf="card.editing">
+    <span class="device-wrapper" *ngFor="let card of deviceCards$ | async">
+      <mat-card class="device-card" *ngIf="!card.editing && !card.showSettings">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>perm_device_information</mat-icon>
+          <mat-card-title>{{card.device.handle}}</mat-card-title>
+          <mat-card-subtitle>{{card.device.description}}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <mat-list>
+            <mat-list-item *ngIf="card.device.createdDate">
+              <mat-icon mat-list-icon>today</mat-icon>
+              <span>{{formatDate(card.device.createdDate)}}</span>
+            </mat-list-item>
+            <mat-list-item *ngIf="card.device.location">
+              <mat-icon mat-list-icon>place</mat-icon>
+              <span>{{card.device.location}}</span>
+            </mat-list-item>
+            <mat-list-item *ngIf="card.device.ipAddress">
+              <mat-icon mat-list-icon>language</mat-icon>
+              <span>{{card.device.ipAddress}}</span>
+            </mat-list-item>
+          </mat-list>
+        </mat-card-content>
+        <mat-card-actions>
+          <button mat-menu-item (click)="showSettings(card)">
+            <mat-icon>settings</mat-icon>
+            <span>View settings</span>
+          </button>
+          <button mat-icon-button [matMenuTriggerFor]="menu">
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          <mat-menu #menu>
+            <button mat-menu-item (click)="beginEdit(card)">
+              <mat-icon>edit</mat-icon>
+              <span>Edit</span>
+            </button>
+            <button mat-menu-item>
+              <mat-icon>delete</mat-icon>
+              <span>Delete</span>
+            </button>
+          </mat-menu>
+        </mat-card-actions>
+      </mat-card>
+      
+      <mat-card class="device-card" *ngIf="card.editing && !card.showSettings">
+        <form name="editDeviceForm" (ngSubmit)="updateDevice(editDeviceForm)" #editDeviceForm="ngForm">
+          <input type="hidden" name="deviceId" [ngModel]="card.editing.device.deviceId">
           <mat-card-header>
-            <mat-icon mat-card-avatar *ngIf="!card.editing.showSettings">perm_device_information</mat-icon>
-            <mat-icon mat-card-avatar *ngIf="card.editing.showSettings">settings</mat-icon>
+            <mat-icon mat-card-avatar>perm_device_information</mat-icon>
             <mat-card-title>
               <mat-form-field>
                 <input matInput placeholder="Handle" [(ngModel)]="card.editing.device.handle" name="handle" #handle="ngModel" maxlength="50" required>
@@ -38,85 +61,71 @@
               </mat-form-field>
             </mat-card-subtitle>
           </mat-card-header>
+          <mat-card-content>
+            <mat-list>
+              <mat-list-item>
+                <mat-icon mat-list-icon>today</mat-icon>
+                <mat-form-field>
+                  <input matInput placeholder="Created date" [ngModel]="card.editing.device.createdDate" (ngModelChange)="setDate($event, card.editing.device.createdDate)" name="createdDate" [matDatepicker]="createdDatePicker" required disabled>
+                  <mat-datepicker-toggle [for]="createdDatePicker" matSuffix></mat-datepicker-toggle>
+                  <mat-datepicker #createdDatePicker></mat-datepicker>
+                </mat-form-field>
+              </mat-list-item>
+              <mat-list-item>
+                <mat-icon mat-list-icon>access_time</mat-icon>
+                <mat-form-field>
+                  <input matInput placeholder="Created time" [ngModel]="getUtcTime(card.editing.device.createdDate)" (ngModelChange)="setTime($event, card.editing.device.createdDate)" name="createdTime" type="time" step="1" required disabled>
+                </mat-form-field>
+              </mat-list-item>
+              <mat-list-item>
+                <mat-icon mat-list-icon>place</mat-icon>
+                <mat-form-field>
+                  <input matInput placeholder="Location" [(ngModel)]="card.editing.device.location" name="location" maxlength="50">
+                </mat-form-field>
+              </mat-list-item>
+              <mat-list-item>
+                <mat-icon mat-list-icon>language</mat-icon>
+                <mat-form-field>
+                  <input matInput placeholder="IP address" [(ngModel)]="card.editing.device.ipAddress" name="ipAddress" #ipAddress="ngModel" maxlength="15" pattern="{{ipv4Pattern}}">
+                  <mat-error *ngIf="ipAddress.hasError('pattern')">Invalid IPv4 address</mat-error>
+                </mat-form-field>
+              </mat-list-item>
+            </mat-list>
+          </mat-card-content>
+          <mat-card-actions>
+            <button mat-menu-item type="submit" [disabled]="!editDeviceForm.form.dirty || !editDeviceForm.form.valid">
+              <mat-icon>check</mat-icon>
+              <span>Submit</span>
+            </button>
+            <button mat-menu-item (click)="card.editing = null">
+              <mat-icon>cancel</mat-icon>
+              <span>Cancel</span>
+            </button>
+          </mat-card-actions>
+        </form>
+      </mat-card>
+
+      <mat-card class="device-card" *ngIf="!card.editing && card.showSettings">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>settings</mat-icon>
+          <mat-card-title>{{card.device.handle}}</mat-card-title>
+          <mat-card-subtitle>{{card.device.description}}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
           <mat-list>
-            <mat-list-item *ngIf="card.editing.device.createdDate">
+            <mat-list-item *ngIf="card.device.settings.createdDate">
               <mat-icon mat-list-icon>today</mat-icon>
-              <mat-form-field>
-                <input matInput placeholder="Created date" [ngModel]="card.editing.device.createdDate" (ngModelChange)="setDate($event, card.editing.device.createdDate)" name="createdDate" [matDatepicker]="createdDatePicker" required disabled>
-                <mat-datepicker-toggle [for]="createdDatePicker" matSuffix></mat-datepicker-toggle>
-                <mat-datepicker #createdDatePicker></mat-datepicker>
-              </mat-form-field>
-            </mat-list-item>
-            <mat-list-item *ngIf="card.editing.device.createdDate">
-              <mat-icon mat-list-icon>access_time</mat-icon>
-              <mat-form-field>
-                <input matInput placeholder="Created time" [ngModel]="getUtcTime(card.editing.device.createdDate)" (ngModelChange)="setTime($event, card.editing.device.createdDate)" name="createdTime" type="time" step="1" required disabled>
-              </mat-form-field>
-            </mat-list-item>
-            <mat-list-item>
-              <mat-icon mat-list-icon>place</mat-icon>
-              <mat-form-field>
-                <input matInput placeholder="Location" [(ngModel)]="card.editing.device.location" name="location" maxlength="50">
-              </mat-form-field>
-            </mat-list-item>
-            <mat-list-item>
-              <mat-icon mat-list-icon>language</mat-icon>
-              <mat-form-field>
-                <input matInput placeholder="IP address" [(ngModel)]="card.editing.device.ipAddress" name="ipAddress" #ipAddress="ngModel" maxlength="15" pattern="{{ipv4Pattern}}">
-                <mat-error *ngIf="ipAddress.hasError('pattern')">Invalid IPv4 address</mat-error>
-              </mat-form-field>
+              <span>{{formatDate(card.device.settings.createdDate)}}</span>
             </mat-list-item>
           </mat-list>
-        </form>
-      </mat-card-content>
-      <mat-card-actions *ngIf="!card.showSettings">
-        <div class="device-card-actions" *ngIf="!card.editing">
-          <button mat-menu-item (click)="showSettings(card)">
-            <mat-icon>settings</mat-icon>
-            <span>View settings</span>
-          </button>
-          <button mat-icon-button>
-            <mat-icon [matMenuTriggerFor]="menu">more_vert</mat-icon>
-          </button>
-          <mat-menu #menu>
-            <button mat-menu-item (click)="beginEdit(card)">
-              <mat-icon>edit</mat-icon>
-              <span>Edit</span>
-            </button>
-            <button mat-menu-item>
-              <mat-icon>delete</mat-icon>
-              <span>Delete</span>
-            </button>
-          </mat-menu>
-        </div>
-        <div class="device-card-actions" *ngIf="card.editing">
-          <button mat-menu-item (click)="card = card.editing">
-            <mat-icon>check</mat-icon>
-            <span>Submit</span>
-          </button>
-          <button mat-menu-item (click)="card.editing = null">
-            <mat-icon>cancel</mat-icon>
-            <span>Cancel</span>
-          </button>
-        </div>
-      </mat-card-actions>
-
-      <mat-card-content class="settings-card-content" *ngIf="card.showSettings">
-        <mat-list *ngIf="!card.editing">
-          <mat-list-item *ngIf="card.device.createdDate">
-            <mat-icon mat-list-icon>today</mat-icon>
-            <span>{{formatDate(card.device.createdDate)}}</span>
-          </mat-list-item>
-        </mat-list>
-      </mat-card-content>
-      <mat-card-actions *ngIf="card.showSettings">
-        <div class="settings-card-actions" *ngIf="!card.editing">
+        </mat-card-content>
+        <mat-card-actions>
           <button mat-menu-item (click)="hideSettings(card)">
             <mat-icon>perm_device_information</mat-icon>
             <span>View device</span>
           </button>
-          <button mat-icon-button>
-            <mat-icon [matMenuTriggerFor]="menu">more_vert</mat-icon>
+          <button mat-icon-button [matMenuTriggerFor]="menu">
+            <mat-icon>more_vert</mat-icon>
           </button>
           <mat-menu #menu>
             <button mat-menu-item (click)="beginEdit(card)">
@@ -128,19 +137,47 @@
               <span>Delete</span>
             </button>
           </mat-menu>
-        </div>
-        <div class="settings-card-actions" *ngIf="card.editing">
-          <button mat-menu-item>
-            <mat-icon>check</mat-icon>
-            <span>Submit</span>
-          </button>
-          <button mat-menu-item (click)="cancelEdit(card)">
-            <mat-icon>cancel</mat-icon>
-            <span>Cancel</span>
-          </button>
-        </div>
-      </mat-card-actions>
-    </mat-card>
+        </mat-card-actions>
+      </mat-card>
+
+      <mat-card class="device-card" *ngIf="card.editing && card.showSettings">
+        <form name="editDeviceSettingsForm">
+          <mat-card-header>
+            <mat-icon mat-card-avatar>settings</mat-icon>
+            <mat-card-title>{{card.device.handle}}</mat-card-title>
+            <mat-card-subtitle>{{card.device.description}}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <mat-list>
+              <mat-list-item>
+                <mat-icon mat-list-icon>today</mat-icon>
+                <mat-form-field>
+                  <input matInput placeholder="Created date" [ngModel]="card.editing.device.settings.createdDate" (ngModelChange)="setDate($event, card.editing.device.settings.createdDate)" name="createdDate" [matDatepicker]="createdDatePicker" required disabled>
+                  <mat-datepicker-toggle [for]="createdDatePicker" matSuffix></mat-datepicker-toggle>
+                  <mat-datepicker #createdDatePicker></mat-datepicker>
+                </mat-form-field>
+              </mat-list-item>
+              <mat-list-item>
+                <mat-icon mat-list-icon>access_time</mat-icon>
+                <mat-form-field>
+                  <input matInput placeholder="Created time" [ngModel]="getUtcTime(card.editing.device.settings.createdDate)" (ngModelChange)="setTime($event, card.editing.device.settings.createdDate)" name="createdTime" type="time" step="1" required disabled>
+                </mat-form-field>
+              </mat-list-item>
+            </mat-list>
+          </mat-card-content>
+          <mat-card-actions>
+            <button mat-menu-item>
+              <mat-icon>check</mat-icon>
+              <span>Submit</span>
+            </button>
+            <button mat-menu-item (click)="card.editing = null">
+              <mat-icon>cancel</mat-icon>
+              <span>Cancel</span>
+            </button>
+          </mat-card-actions>
+        </form>
+      </mat-card>
+    </span>
   </div>
   <button mat-raised-button class="add-device-button" (click)="openAddDeviceSheet()">
     <mat-icon>add</mat-icon>

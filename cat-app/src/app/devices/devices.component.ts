@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { MatBottomSheet, MatBottomSheetConfig } from '@angular/material';
 import { AddDeviceSheetComponent } from '../add-device-sheet/add-device-sheet.component';
 import { DevicesService } from '../services/devices.service';
@@ -7,6 +7,7 @@ import { Observable } from 'rxjs';
 import { DeviceCard } from '../models/device-card';
 import { map } from 'rxjs/operators';
 import { Moment } from 'moment';
+import { FormGroupDirective, NgForm } from '@angular/forms';
 
 @Component({
   selector: 'app-devices',
@@ -15,7 +16,7 @@ import { Moment } from 'moment';
 })
 export class DevicesComponent implements OnInit {
   private readonly ipv4Pattern: string = "\\b(?:(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9]))\\b";
-
+  @ViewChild('editDeviceForm') editDeviceForm: FormGroupDirective;
   deviceCards$: Observable<DeviceCard[]>;
 
   constructor(private bottomSheet: MatBottomSheet, private devicesService: DevicesService) {
@@ -33,6 +34,14 @@ export class DevicesComponent implements OnInit {
   }
 
   ngOnInit() {}
+
+  private updateDevice(form: NgForm): void {
+    console.log(form.value);
+    this.devicesService.updateDevice(form.value)
+      .subscribe(res => {
+        console.log(res);
+      });
+  }
 
   openAddDeviceSheet(): void {
     this.bottomSheet.open(AddDeviceSheetComponent);

@@ -11,34 +11,50 @@
     justify-content: space-evenly;
 }
 
-.device-card {
-    width: 20rem;
-    margin: 1.25rem 1.75rem;
+.device-wrapper {
     display: flex;
     flex-direction: column;
 
-    mat-card-header {
-        flex: 1 0 auto;
-
-        mat-icon[mat-card-avatar] {
-            display: flex;
-            justify-content: center;
-        }
-
-        mat-card-title, mat-card-subtitle {
-            text-overflow: ellipsis;
-            overflow: hidden;
-        }
-    }
-
-    mat-card-content {
+    .device-card {
         flex: 0 1 100%;
-    }
-
-    .device-card-actions, .settings-card-actions {
-        flex: 1 0 auto;
+        width: 20rem;
+        margin: 1.25rem 1.75rem;
         display: flex;
-        align-items: center;
+        flex-direction: column;
+    
+        mat-card-header {
+            flex: 1 0 auto;
+    
+            mat-icon[mat-card-avatar] {
+                display: flex;
+                justify-content: center;
+            }
+    
+            mat-card-title, mat-card-subtitle {
+                text-overflow: ellipsis;
+                overflow: hidden;
+            }
+        }
+
+        form {
+            flex: 0 1 100%;
+            display: flex;
+            flex-direction: column;
+        }
+    
+        mat-card-content {
+            flex: 0 1 100%;
+        }
+    
+        mat-card-actions {
+            display: flex;
+            align-items: center;
+    
+            &:last-child {
+                margin-bottom: -8px;
+                padding-bottom: 0;
+            }
+        }
     }
 }
 
