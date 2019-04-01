@@ -5,12 +5,22 @@ from os import path, remove
 from pydub import AudioSegment
 from pydub.generators import WhiteNoise
 from gtts import gTTS
-from CAT.record import MILLISECONDS_PER_SECOND, RATE, MAX_SAMPLE_LENGTH, MIN_SAMPLE_LENGTH, MAX_SILENCE_LENGTH, VAD_FRAME_MS, PERIODIC_SAMPLE_RATE, NUM_BYTES
+from CAT import settings
+
+settings = settings.Config()
+# conglomerate all relevant settings here, so they can be hard-coded or overridden for tests more easily
+NUM_BYTES = settings.get("num_bytes")
+RATE = settings.get("rate")
+MILLISECONDS_PER_SECOND = settings.get("milliseconds_per_second")
+MIN_SAMPLE_LENGTH = settings.get("min_sample_length")
+MAX_SAMPLE_LENGTH = settings.get("max_sample_length")
+MAX_SILENCE_LENGTH = settings.get("max_silence_length")
+
 
 BITS_PER_BYTE = 8
 
-MARGIN = 2 * VAD_FRAME_MS # in milliseconds
-LARGER_MARGIN = PERIODIC_SAMPLE_RATE * MILLISECONDS_PER_SECOND
+MARGIN = 2 * settings.get("vad_frame_ms") # in milliseconds
+LARGER_MARGIN = settings.get("periodic_sample_rate") * MILLISECONDS_PER_SECOND
 
 def generate_speech(text, lang, file_path):
 	speech_file = gTTS(text, lang=lang)

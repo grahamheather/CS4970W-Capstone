@@ -1,11 +1,13 @@
 import pytest
+from unittest.mock import Mock
 
 # supporting libraries
 from os import path
 import numpy
 import multiprocessing
+import datetime
 
-from CAT.settings import *
+from CAT import settings
 
 # file under test
 from CAT import speaker_reid
@@ -15,6 +17,13 @@ from CAT import speaker_reid
 
 def get_test_recording_dir():
 	return path.join('test', 'test_recordings')
+
+
+# FIXTURES
+
+@pytest.fixture(scope="session", autouse=True)
+def config():
+	return settings.Config()
 
 
 # TESTS
@@ -51,12 +60,12 @@ def test_speaker_distance_singlar():
 
 
 # test that a new speaker can be added with no previous speakers
-def test_identify_speaker_empty():
+def test_identify_speaker_empty(config):
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {}
 	lock = multiprocessing.Lock()
-	result = speaker_reid.identify_speaker(mean, covariance, dictionary, lock)
+	result = speaker_reid.identify_speaker(mean, covariance, dictionary, lock, config)
 	assert len(dictionary) == 1
 	assert result in dictionary
 	assert dictionary[result][:3] == (mean, covariance, 1)
@@ -64,7 +73,7 @@ def test_identify_speaker_empty():
 
 
 # test that a speaker can be compared against previous speakers
-def test_identify_speaker_previous():
+def test_identify_speaker_previous(config):
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {
@@ -82,7 +91,7 @@ def test_identify_speaker_previous():
 		)
 	}
 	lock = multiprocessing.Lock()
-	result = speaker_reid.identify_speaker(mean, covariance, dictionary, lock)
+	result = speaker_reid.identify_speaker(mean, covariance, dictionary, lock, config)
 	assert len(dictionary) == 2
 	assert result == 'abc'
 	assert len(dictionary[result]) == 4
@@ -94,7 +103,7 @@ def test_identify_speaker_previous():
 
 # test that a speaker can be compared against previous speakers
 # including ones with singular matrices
-def test_identify_speaker_invalid_previous():
+def test_identify_speaker_invalid_previous(config):
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {
@@ -112,7 +121,7 @@ def test_identify_speaker_invalid_previous():
 		)
 	}
 	lock = multiprocessing.Lock()
-	result = speaker_reid.identify_speaker(mean, covariance, dictionary, lock)
+	result = speaker_reid.identify_speaker(mean, covariance, dictionary, lock, config)
 	assert len(dictionary) == 2
 	assert result == 'abc'
 	assert len(dictionary[result]) == 4
@@ -124,7 +133,7 @@ def test_identify_speaker_invalid_previous():
 
 # te that a new speaker can be identified from previous speakers
 # including ones with singular matrices
-def test_identify_speaker_new():
+def test_identify_speaker_new(config):
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {
@@ -142,7 +151,7 @@ def test_identify_speaker_new():
 		)
 	}
 	lock = multiprocessing.Lock()
-	result = speaker_reid.identify_speaker(mean, covariance, dictionary, lock)
+	result = speaker_reid.identify_speaker(mean, covariance, dictionary, lock, config)
 	assert len(dictionary) == 3
 	assert (not result == 'abc') and (not result == 'xyz')
 	assert len(dictionary[result]) == 4
@@ -154,7 +163,7 @@ def test_identify_speaker_new():
 
 # test that a new speaker can be identified from previous speakers
 # including ones with singular matrices	
-def test_identify_speaker_invalid_new():
+def test_identify_speaker_invalid_new(config):
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {
@@ -172,7 +181,7 @@ def test_identify_speaker_invalid_new():
 		)
 	}
 	lock = multiprocessing.Lock()
-	result = speaker_reid.identify_speaker(mean, covariance, dictionary, lock)
+	result = speaker_reid.identify_speaker(mean, covariance, dictionary, lock, config)
 	assert len(dictionary) == 3
 	assert (not result == 'abc') and (not result == 'xyz')
 	assert len(dictionary[result]) == 4
@@ -183,7 +192,7 @@ def test_identify_speaker_invalid_new():
 
 
 # test that speakers are eventually forgotten
-def test_identify_speakers_forget_speakers():
+def test_identify_speakers_forget_speakers(config):
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {
@@ -197,7 +206,7 @@ def test_identify_speakers_forget_speakers():
 			numpy.array([[1000000000], [0]]), 
 			numpy.array([[1, 0], [0, 1]]), 
 			3,
-			datetime.datetime.now() - SPEAKER_FORGET_INTERVAL
+			datetime.datetime.now() - config.get("speaker_forget_interval")
 		),
 		'xyz': (
 			numpy.array([[-100000000], [0]]),
@@ -209,11 +218,11 @@ def test_identify_speakers_forget_speakers():
 			numpy.array([[-100000000], [0]]),
 			numpy.array([[1, 1], [1, 1]]), 
 			5,
-			datetime.datetime.now() - 2 * SPEAKER_FORGET_INTERVAL
+			datetime.datetime.now() - 2 * config.get("speaker_forget_interval")
 		)
 	}
 	lock = multiprocessing.Lock()
-	result = speaker_reid.identify_speaker(mean, covariance, dictionary, lock)
+	result = speaker_reid.identify_speaker(mean, covariance, dictionary, lock, config)
 	assert 'abc' in dictionary
 	assert 'xyz' in dictionary
 	assert 'a1b2c3' not in dictionary
@@ -221,9 +230,17 @@ def test_identify_speakers_forget_speakers():
 
 
 # test that speakers are eliminated if there are too many
-def test_identify_speakers_too_many_speakers(monkeypatch):
+def test_identify_speakers_too_many_speakers(config):
 	# lower maximum number of speakers
-	monkeypatch.setattr(speaker_reid, "MAX_NUMBER_OF_SPEAKERS", 2)
+	def mock_max_speakers(key):
+		if key == "max_number_of_speakers":
+			return 2
+		else:
+			return config.get(key)
+
+	config_mock = Mock()
+	config_mock.get = mock_max_speakers
+
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {
@@ -253,7 +270,7 @@ def test_identify_speakers_too_many_speakers(monkeypatch):
 		)
 	}
 	lock = multiprocessing.Lock()
-	result = speaker_reid.identify_speaker(mean, covariance, dictionary, lock)
+	result = speaker_reid.identify_speaker(mean, covariance, dictionary, lock, config_mock)
 	assert 'abc' not in dictionary
 	assert 'xyz' not in dictionary
 	assert 'a1b2c3' in dictionary

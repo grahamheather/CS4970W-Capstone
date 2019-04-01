@@ -10,10 +10,10 @@ from CAT import record
 from CAT import speaker_id
 from CAT import feature_extraction
 from CAT import transmission
-from CAT.settings import *
+from CAT import settings
 
 
-def analyze_audio_file(filename, speaker_dictionary, speaker_dictionary_lock):
+def analyze_audio_file(filename, speaker_dictionary, speaker_dictionary_lock, config):
 	''' Analyzes the file of audio, extracting and processing speech
 
 		Parameters:
@@ -23,12 +23,14 @@ def analyze_audio_file(filename, speaker_dictionary, speaker_dictionary_lock):
 				dict, dictionary to store statistics about each speaker in
 			speaker_dictionary_lock
 				a lock so that multiple processes do not try to read/write/update/delete speakers concurrently
+			config
+				CAT.settings.Config - all settings associated with the program
 
 	'''
 
 	# files to analyze
-	if SPEAKER_DIARIZATION:
-		files = speaker_id.identify_speakers(filename, speaker_dictionary, speaker_dictionary_lock)
+	if config.get("speaker_diarization"):
+		files = speaker_id.identify_speakers(filename, speaker_dictionary, speaker_dictionary_lock, config)
 	else:
 		files = [(filename, None)]
 
@@ -38,11 +40,11 @@ def analyze_audio_file(filename, speaker_dictionary, speaker_dictionary_lock):
 		transmission.transmit(features, speaker)
 		
 		# if speaker diarization was used, new subfiles have been created and need to be removed
-		if SPEAKER_DIARIZATION:
+		if config.get("speaker_diarization"):
 			os.remove(filename)
 
 
-def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock):
+def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock, config):
 	''' Analyzes files of audio extracting and processing speech
 
 		Parameters:
@@ -52,6 +54,8 @@ def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock)
 				dictionary to store statistics about each speaker in
 			speaker_dictionary_lock
 				a lock so that multiple processes do not try to read/write/update/delete speakers concurrently
+			config
+				CAT.settings.Config - all settings associated with the program
 	'''
 
 	# analysis processes process files indefinitely
@@ -61,7 +65,7 @@ def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock)
 		filename = file_queue.get()
 		
 		# process the file
-		analyze_audio_file(filename, speaker_dictionary, speaker_dictionary_lock)
+		analyze_audio_file(filename, speaker_dictionary, speaker_dictionary_lock, config)
 
 		# delete the file
 		os.remove(filename)
@@ -69,6 +73,7 @@ def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock)
 
 def start_processes():
 	''' Starts all process of the program '''
+	config = settings.Config()
 
 	process_manager = Manager()
 	speaker_dictionary = process_manager.dict()
@@ -77,9 +82,9 @@ def start_processes():
 
 	# ideally of the cores should run the record.recording process
 	# and the other cores will run the analysis processes
-	record.recording_process = Process(target=record.record, args=(file_queue,))
+	record.recording_process = Process(target=record.record, args=(file_queue, config,))
 	record.recording_process.start()
-	analysis_processes = [Process(target=analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock)) for _ in range(NUM_CORES - 1)]
+	analysis_processes = [Process(target=analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock, config)) for _ in range(config.get("num_cores") - 1)]
 	for process in analysis_processes:
 		process.start()
 

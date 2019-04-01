@@ -1,42 +1,104 @@
 import pyaudio
 import datetime
+import configparser
+from multiprocessing import Lock
+from os import path
 
-# universal constants
-MILLISECONDS_PER_SECOND = 1000
 
-# hardware specs
-NUM_CORES = 4
+class Config():
+	''' A class to contain all of the data and functions associated with
+		getting, updating, and writing settings to disk.
+	'''
 
-# audio storage settings
-MIN_EMPTY_SPACE_IN_BYTES = 7064096
+	def __init__(self):
+		''' Read settings from the config.ini file '''
+		
+		self.settings = {}
 
-# audio recording settings
-VAD_LEVEL = 2 # "integer between 0 and 3. 0 is the least aggressive about filtering out non-speech, 3 is the most aggressive." -py-webrtcvad docs
-FORMAT = pyaudio.paInt16 # WebRTC VAD only accepts 16-bit audio
-NUM_BYTES = 2 # 16 bits in format = 2 bytes in format
-NUM_CHANNELS = 1 # WebRTC VAD only accepts mono audio
-RATE = 48000 # WebRTC VAD only accepts 8000, 16000, 32000 or 48000 Hz
-VAD_FRAME_MS = 30 # WebRTC VAD only accepts frames of 10, 20, or 30 ms
-VAD_FRAME_SIZE = int(RATE * VAD_FRAME_MS / MILLISECONDS_PER_SECOND)
-VAD_FRAME_BYTES = VAD_FRAME_SIZE * NUM_BYTES * NUM_CHANNELS
+		# read settings file
+		self.config = configparser.ConfigParser()
+		self.config.read(path.join("CAT", "config.ini"))
 
-# settings based on system timing and situation
-PERIODIC_SAMPLE_RATE = .5  # how often to check when no speech has been detected, in seconds
-MIN_SAMPLE_LENGTH = .75 # smallest sample to save, in seconds
-MAX_SAMPLE_LENGTH = 30 # largest sample to save (larger ones will be split), in seconds
-MAX_SILENCE_LENGTH = .5 # largest length of silence to include in a single sample
+		# read by value type
+		for key in self.config["Integer Values"]:
+			self.settings[key] = self.config["Integer Values"].getint(key)
+		for key in self.config["Float Values"]:
+			self.settings[key] = self.config["Float Values"].getfloat(key)
+		for key in self.config["Boolean Values"]:
+			self.settings[key] = self.config["Boolean Values"].getboolean(key)
+		for key in self.config["Day Values"]:
+			self.settings[key] = datetime.timedelta(days=int(self.config["Day Values"][key]))
 
-# calculated from system settings
-PERIODIC_SAMPLE_FRAMES = int(PERIODIC_SAMPLE_RATE * MILLISECONDS_PER_SECOND / VAD_FRAME_MS)
-MIN_SAMPLE_FRAMES = int(MIN_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND / VAD_FRAME_MS)
-MAX_SAMPLE_FRAMES = int(MAX_SAMPLE_LENGTH * MILLISECONDS_PER_SECOND / VAD_FRAME_MS)
-MAX_SILENCE_FRAMES = int(MAX_SILENCE_LENGTH * MILLISECONDS_PER_SECOND / VAD_FRAME_MS)
+		# calculated values
+		calculated_fields = set(["vad_frame_size", "vad_frame_bytes", "format", "periodic_sample_frames", "min_sample_frames", "max_sample_frames", "max_silence_frames"])
+		# audio recording self.settings
+		self.settings["vad_frame_size"] = int(
+			self.settings["rate"] * self.settings["vad_frame_ms"] / self.settings["milliseconds_per_second"]
+		)
+		self.settings["vad_frame_bytes"] = self.settings["vad_frame_size"] * self.settings["num_bytes"] * self.settings["num_channels"]
+		self.settings["format"] = pyaudio.paInt16 # WebRTC VAD only accepts 16-bit audio
+		
+		# calculated from system self.settings
+		self.settings["periodic_sample_frames"] = int(
+			self.settings["periodic_sample_rate"] * self.settings["milliseconds_per_second"] / self.settings["vad_frame_ms"]
+		)
+		self.settings["min_sample_frames"] = int(
+			self.settings["min_sample_length"] * self.settings["milliseconds_per_second"] / self.settings["vad_frame_ms"]
+		)
+		self.settings["max_sample_frames"] = int(
+			self.settings["max_sample_length"] * self.settings["milliseconds_per_second"] / self.settings["vad_frame_ms"]
+		)
+		self.settings["max_silence_frames"] = int(
+			self.settings["max_silence_length"] * self.settings["milliseconds_per_second"] / self.settings["vad_frame_ms"]
+		)
 
-# speaker diarization settings
-SPEAKER_DIARIZATION = False
-MAX_SPEAKERS = 2
+		self.settings_lock = Lock()
 
-# speaker re-identification settings
-SPEAKER_REID_DISTANCE_THRESHOLD = 3
-SPEAKER_FORGET_INTERVAL = datetime.timedelta(days=14)
-MAX_NUMBER_OF_SPEAKERS = 10
+
+	def get(self, name):
+		''' Get the value of a setting
+
+			Parameters:
+				name - str, the name of the setting (all lowercase, case sensitive)
+
+			Returns:
+				the value of the setting
+
+		'''
+		return self.settings[name]
+
+
+	def set(self, name, value):
+		''' Set the value of a setting
+
+			Parameters:
+				name - str, the name of the setting (all lowercase, case sensitive)
+				value - the new value of the setting
+
+		'''
+
+		# check input
+		if name in calculated_fields:
+			raise 
+
+		# acquire lock to edit
+		self.settings_lock.acquire()
+
+		# update in active data structure
+		self.settings[name] = value
+
+		# update in self.config
+		found = False
+		for section in self.config:
+			for key in section:
+				if key == name:
+					self.config[section][key] == str(value)
+					found = True
+					break
+			if found == True:
+				break
+
+		with open(path.join("CAT", "config.ini"), 'w') as self.config_file:
+			self.config.write(self.config_file)
+
+		self.settings_lock.release()

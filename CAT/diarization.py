@@ -1,15 +1,16 @@
 import collections
 from pyAudioAnalysis import audioSegmentation
 from CAT import utilities
-from CAT.settings import *
 
 
-def split_by_speaker(filename):
+def split_by_speaker(filename, config):
 	''' Splits a file of audio into segments identified by speaker
 
 		Parameters:
 			filename
 				string, the name of the audio file
+			config
+				CAT.settings.Config - all settings. associated with the program
 
 		Returns:
 			{
@@ -22,12 +23,12 @@ def split_by_speaker(filename):
 	# LDA is disabled so that all speakers are analyzed in the same space
 	# and all clusters across all speaker identifications are roughly
 	# Gaussian in that space
-	speaker_detected_by_window, speaker_means, speaker_covariances = audioSegmentation.speakerDiarization(filename, MAX_SPEAKERS, lda_dim=0)
+	speaker_detected_by_window, speaker_means, speaker_covariances = audioSegmentation.speakerDiarization(filename, config.get("max_speakers"), lda_dim=0)
 
 	# calculate necessary stats on labelled windows
 	WINDOW_LENGTH = .2 # in seconds
-	LENGTH_OF_WINDOW_IN_FRAMES = int(RATE * WINDOW_LENGTH)
-	LENGTH_OF_WINDOW_IN_BYTES = LENGTH_OF_WINDOW_IN_FRAMES * NUM_CHANNELS * NUM_BYTES
+	LENGTH_OF_WINDOW_IN_FRAMES = int(config.get("rate") * WINDOW_LENGTH)
+	LENGTH_OF_WINDOW_IN_BYTES = LENGTH_OF_WINDOW_IN_FRAMES * config.get("num_channels") * config.get("num_bytes")
 
 	# open file
 	audio = utilities.read_file(filename)

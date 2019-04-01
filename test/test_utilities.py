@@ -6,7 +6,7 @@ from os import path
 import os
 import pickle
 
-from CAT.settings import *
+from CAT import settings
 
 # file under test
 from CAT import utilities
@@ -42,6 +42,11 @@ def generate_audio_files():
 	return stats
 
 
+@pytest.fixture(scope="session", autouse=True)
+def config():
+	return settings.Config()
+
+
 # remove all recordings from previous tests before each new test
 @pytest.fixture(autouse=True)
 def cleanup():
@@ -74,19 +79,19 @@ def test_read_file_not_exists():
 
 
 # test that a file can be written
-def test_save_to_file(generate_audio_files):
+def test_save_to_file(generate_audio_files, config):
 	data = generate_audio_files['read_file']
-	result = utilities.save_to_file(data)
+	result = utilities.save_to_file(data, config)
 	written_data = utilities.read_file(result)
 	assert data == written_data
 
 
 # test that a file is not written with the disk is almost full
 @mock.patch("CAT.utilities.shutil.disk_usage")
-def test_save_to_file_no_space(usage_mock, generate_audio_files):
-	usage_mock.return_value = (MIN_EMPTY_SPACE_IN_BYTES * 2,  MIN_EMPTY_SPACE_IN_BYTES + 1, MIN_EMPTY_SPACE_IN_BYTES - 1)
+def test_save_to_file_no_space(usage_mock, generate_audio_files, config):
+	usage_mock.return_value = (config.get("min_empty_space_in_bytes") * 2,  config.get("min_empty_space_in_bytes") + 1, config.get("min_empty_space_in_bytes") - 1)
 	data = generate_audio_files['read_file']
 	with pytest.raises(IOError):
-		result = utilities.save_to_file(data)
+		result = utilities.save_to_file(data, config)
 	assert len(os.listdir(get_recording_dir())) == 0
 

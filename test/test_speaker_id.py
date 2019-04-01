@@ -8,6 +8,8 @@ import multiprocessing
 import pickle
 import numpy
 
+from CAT import settings
+
 # file under test
 from CAT import speaker_id
 
@@ -44,6 +46,11 @@ def generate_audio_files():
 	return stats
 
 
+@pytest.fixture(scope="session", autouse=True)
+def config():
+	return settings.Config()
+
+
 # remove all recordings from previous tests before each new test
 @pytest.fixture(autouse=True)
 def cleanup():
@@ -59,7 +66,7 @@ def cleanup():
 
 # Test that a previously seen speaker can be identified in a new recording
 @pytest.mark.filterwarnings("ignore:")
-def test_identify_speakers_same_recording(generate_audio_files):
+def test_identify_speakers_same_recording(generate_audio_files, config):
 	# The speaker diarization module is unstable.
 	# It is provided as an extra feature to be improved and developed upon.
 	# As such the realistic tests for it are equally unstable.
@@ -75,7 +82,7 @@ def test_identify_speakers_same_recording(generate_audio_files):
 		lock = multiprocessing.Lock()
 
 		# check that the first new speaker is identified properly
-		result1 = speaker_id.identify_speakers(filename, dictionary, lock)
+		result1 = speaker_id.identify_speakers(filename, dictionary, lock, config)
 		speakers1 = set(speaker for file, speaker in result1)
 		tests.append(len(dictionary) == 1)
 		tests.append(len(speakers1) == 1)
@@ -83,7 +90,7 @@ def test_identify_speakers_same_recording(generate_audio_files):
 
 		# check that that speaker is re-identified propery as well
 		# (in an identical recording)
-		result = speaker_id.identify_speakers(filename, dictionary, lock)
+		result = speaker_id.identify_speakers(filename, dictionary, lock, config)
 		speakers = set(speaker for file, speaker in result)
 		tests.append(len(dictionary) == 1)
 		tests.append(len(speakers) == 1)
@@ -96,7 +103,7 @@ def test_identify_speakers_same_recording(generate_audio_files):
 
 # Test differentiating a new speaker from previously seen ones in recordings
 @pytest.mark.filterwarnings("ignore:")
-def test_identify_speakers_new_speaker(generate_audio_files):
+def test_identify_speakers_new_speaker(generate_audio_files, config):
 	# The speaker diarization module is unstable.
 	# It is provided as an extra feature to be improved and developed upon.
 	# As such the realistic tests for it are equally unstable.
@@ -113,7 +120,7 @@ def test_identify_speakers_new_speaker(generate_audio_files):
 		lock = multiprocessing.Lock()
 
 		# check that the first new speaker is identified properly
-		result1 = speaker_id.identify_speakers(filename1, dictionary, lock)
+		result1 = speaker_id.identify_speakers(filename1, dictionary, lock, config)
 		speakers1 = set(speaker for file, speaker in result1)
 		tests.append(len(dictionary) == 1)
 		tests.append(len(speakers1) == 1)
@@ -121,7 +128,7 @@ def test_identify_speakers_new_speaker(generate_audio_files):
 
 		# check that that speaker is re-identified propery as well
 		# (in an identical recording)
-		result2 = speaker_id.identify_speakers(filename2, dictionary, lock)
+		result2 = speaker_id.identify_speakers(filename2, dictionary, lock, config)
 		speakers2 = set(speaker for file, speaker in result2)
 		tests.append(len(dictionary) == 2)
 		tests.append(len(speakers2) == 2)
@@ -148,7 +155,7 @@ def test_identify_speakers_no_space(save_mock, split_mock, identify_mock, genera
 	save_mock.side_effect = ['test1.wav', IOError(), 'test2.wav']
 
 	# run function
-	result = speaker_id.identify_speakers('test.wav', {}, None)
+	result = speaker_id.identify_speakers('test.wav', {}, None, config)
 
 	# check that only the appropriate files were listed
 	assert result == [('test1.wav', 'a'), ('test2.wav', 'a')]

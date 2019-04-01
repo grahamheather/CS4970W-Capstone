@@ -1,6 +1,3 @@
-from CAT.settings import *
-
-
 def transmit(features, speaker):
 	''' Transmits features extracted from a slice of audio data
 		Parameters:
