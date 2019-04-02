@@ -212,7 +212,7 @@ export class TeamCatDataAccess {
         return this.callStoredProc('p_update_device_settings(?,?)', [settings.deviceId, settings.properties || null])
             .pipe(
                 map(res => {
-                    if(!res[0][0].last_modified) {
+                    if(!res[0][0].created_date) {
                         const error = new Error(`No device found with id: ${settings.deviceId}`);
                         error.name = "NotFoundError";
                         throw error;
