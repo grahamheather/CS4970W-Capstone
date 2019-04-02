@@ -2,7 +2,7 @@
 # prevents more than one thread running at a time.
 # This allows the program to, ideally, take advantage of multiple
 # cores on the Raspberry Pi.
-from multiprocessing import Process, Queue, Manager, Value, Lock, Array
+from multiprocessing import Process, Queue, Manager, Value, Lock, Array, Event, Semaphore
 
 import os
 
@@ -44,7 +44,7 @@ def analyze_audio_file(filename, speaker_dictionary, speaker_dictionary_lock, co
 			os.remove(filename)
 
 
-def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock, config):
+def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock, config, threads_ready_to_update, setting_update):
 	''' Analyzes files of audio extracting and processing speech
 
 		Parameters:
@@ -56,6 +56,10 @@ def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock,
 				a lock so that multiple processes do not try to read/write/update/delete speakers concurrently
 			config
 				CAT.settings.Config - all settings associated with the program
+			threads_ready_to_update
+				multiprocessing.Semaphore - indicates how many threads are currently ready for a settings update
+			setting_update
+				multiprocessing.Event - indicates whether a settings update is occuring (cleared - occuring, set - not occurring)
 	'''
 
 	# analysis processes process files indefinitely
@@ -70,6 +74,14 @@ def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock,
 		# delete the file
 		os.remove(filename)
 
+		transmission.check_for_updates(config, threads_ready_to_update, setting_update)
+
+		# no files being processed
+		# so this is a good time for a settings update
+		threads_ready_to_update.release() # signal that this thread is ready to update settings
+		setting_update.wait() # do not attempt to re-acquire the semaphore until the settings update is complete
+		threads_ready_to_update.acquire() # signal that this thread is no longer ready to update settings
+
 
 def start_processes():
 	''' Starts all process of the program '''
@@ -77,14 +89,17 @@ def start_processes():
 
 	process_manager = Manager()
 	speaker_dictionary = process_manager.dict()
+	setting_update = Event()
+	setting_update.set()
+	threads_ready_to_update = Semaphore(0)
 	speaker_dictionary_lock = Lock()
 	file_queue = Queue() # thread-safe FIFO queue
 
 	# ideally of the cores should run the record.recording process
 	# and the other cores will run the analysis processes
-	record.recording_process = Process(target=record.record, args=(file_queue, config,))
+	record.recording_process = Process(target=record.record, args=(file_queue, config, threads_ready_to_update, setting_update))
 	record.recording_process.start()
-	analysis_processes = [Process(target=analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock, config)) for _ in range(config.get("num_cores") - 1)]
+	analysis_processes = [Process(target=analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock, config, threads_ready_to_update, setting_update)) for _ in range(config.get("num_cores") - 1)]
 	for process in analysis_processes:
 		process.start()
 

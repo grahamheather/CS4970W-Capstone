@@ -34,9 +34,11 @@ def test_start_processes(monkeypatch, config):
 	global recording_process_counter
 	recording_process_counter = multiprocessing.Value('i', 0)
 
-	def increment_recording_process_counter(q, s):
+	def increment_recording_process_counter(q, c, s, e):
 		assert type(q) == multiprocessing.queues.Queue
-		assert type(s) == settings.Config
+		assert type(c) == settings.Config
+		assert type(s) == multiprocessing.synchronize.Semaphore
+		assert type(e) == multiprocessing.synchronize.Event
 		global recording_process_counter
 		with recording_process_counter.get_lock():
 			recording_process_counter.value += 1
@@ -47,11 +49,13 @@ def test_start_processes(monkeypatch, config):
 	global analysis_process_counter
 	analysis_process_counter = multiprocessing.Value('i', 0)
 
-	def increment_analysis_process_counter(a, b, c, d):
-		assert type(a) == multiprocessing.queues.Queue
-		assert type(b) == multiprocessing.managers.DictProxy
-		assert type(c) == multiprocessing.synchronize.Lock
-		assert type(d) == settings.Config
+	def increment_analysis_process_counter(q, d, l, c, s, e):
+		assert type(q) == multiprocessing.queues.Queue
+		assert type(d) == multiprocessing.managers.DictProxy
+		assert type(l) == multiprocessing.synchronize.Lock
+		assert type(c) == settings.Config
+		assert type(s) == multiprocessing.synchronize.Semaphore
+		assert type(e) == multiprocessing.synchronize.Event
 		global analysis_process_counter
 		with analysis_process_counter.get_lock():
 			analysis_process_counter.value += 1
@@ -71,10 +75,17 @@ def test_start_processes(monkeypatch, config):
 
 # Test analyzing audio files in processing queue
 def test_analyze_audio_files(monkeypatch, config):
-	processed_files = multiprocessing.Queue()
+	# initialize Process-shared objects
+	process_manager = multiprocessing.Manager()
+	speaker_dictionary = process_manager.dict()
+	speaker_dictionary_lock = multiprocessing.Lock()
+	semaphore = multiprocessing.Semaphore(1)
+	event = multiprocessing.Event()
+	event.set()
 
 	# replace the audio analysis function with placing the filename that would have been processed into a queue
 	# also check that unused arguments are appropriate
+	processed_files = multiprocessing.Queue()
 	def analyze_audio_file_mock(filename, speaker_dictionary, speaker_dictionary_lock, config):
 		assert type(speaker_dictionary) == multiprocessing.managers.DictProxy
 		assert type(speaker_dictionary_lock) == multiprocessing.synchronize.Lock
@@ -96,13 +107,8 @@ def test_analyze_audio_files(monkeypatch, config):
 	# check that all filenames were successfully placed in the queue
 	assert file_queue.qsize() == len(filenames)
 
-	# other arguments for the processing threads
-	process_manager = multiprocessing.Manager()
-	speaker_dictionary = process_manager.dict()
-	speaker_dictionary_lock = multiprocessing.Lock()
-
 	# start the audio analysis Process
-	process = multiprocessing.Process(target=scheduling.analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock, config))
+	process = multiprocessing.Process(target=scheduling.analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock, config, semaphore, event))
 	process.start()
 
 	# give the Process sufficient time to iterate over all files
@@ -126,6 +132,14 @@ def test_analyze_audio_files(monkeypatch, config):
 
 # Test analyzing a new audio file added to the processing queue
 def test_analyze_audio_files_late_add(monkeypatch, config):
+	# initialized Process-shared objects
+	process_manager = multiprocessing.Manager()
+	speaker_dictionary = process_manager.dict()
+	speaker_dictionary_lock = multiprocessing.Lock()
+	semaphore = multiprocessing.Semaphore(1)
+	event = multiprocessing.Event()
+	event.set()
+
 	# replace the audio analysis function with placing the filename that would have been processed into a queue
 	processed_files = multiprocessing.Queue()
 	monkeypatch.setattr(scheduling, "analyze_audio_file", lambda filename, _, __, ___: processed_files.put(filename))
@@ -133,13 +147,8 @@ def test_analyze_audio_files_late_add(monkeypatch, config):
 	# initialize an empty queue of files
 	file_queue = multiprocessing.Queue()
 
-	# other arguments for the processing threads
-	process_manager = multiprocessing.Manager()
-	speaker_dictionary = process_manager.dict()
-	speaker_dictionary_lock = multiprocessing.Lock()
-
 	# start the audio analysis Process
-	process = multiprocessing.Process(target=scheduling.analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock, config))
+	process = multiprocessing.Process(target=scheduling.analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock, config, semaphore, event))
 	process.start()
 
 	# wait a small amount of time

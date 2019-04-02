@@ -9,6 +9,7 @@ import wave
 from os import path
 import os
 from queue import Queue
+from multiprocessing import Semaphore, Event
 
 from CAT import settings
 
@@ -146,14 +147,20 @@ def test_queue_audio_buffer_error(save_mock, config):
 # test that feeding only silence will not save a file
 @pytest.mark.parametrize('mock_stream', [path.join(get_test_recording_dir(), 'silence.wav')], indirect=['mock_stream'])
 def test_silence(mock_stream, config):
-	record.record(Queue(), config)
+	semaphore = Semaphore(1)
+	event = Event()
+	event.set()
+	record.record(Queue(), config, semaphore, event)
 	assert os.listdir(get_recording_dir()) == []
 
 
 # test that speech less than the min sample length will not save a file
 @pytest.mark.parametrize('mock_stream', [path.join(get_test_recording_dir(), 'hello.wav')], indirect=['mock_stream'])
 def test_short(mock_stream, config):
-	record.record(Queue(), config)
+	semaphore = Semaphore(1)
+	event = Event()
+	event.set()
+	record.record(Queue(), config, semaphore, event)
 	assert os.listdir(get_recording_dir()) == []
 
 
@@ -161,7 +168,10 @@ def test_short(mock_stream, config):
 # (check file length and contents)
 @pytest.mark.parametrize('mock_stream', [path.join(get_test_recording_dir(), 'hello+how.wav')], indirect=['mock_stream'])
 def test_short_long(generate_audio_files, mock_stream, config):
-	record.record(Queue(), config)
+	semaphore = Semaphore(1)
+	event = Event()
+	event.set()
+	record.record(Queue(), config, semaphore, event)
 	assert len(os.listdir(get_recording_dir())) == 1
 	recording = read_wav(path.join(get_recording_dir(), os.listdir(get_recording_dir())[0]))
 	original = read_wav(path.join(get_test_recording_dir(), 'hello+how.wav'))
@@ -175,7 +185,10 @@ def test_short_long(generate_audio_files, mock_stream, config):
 # (check file length and contents)
 @pytest.mark.parametrize('mock_stream', [path.join(get_test_recording_dir(), 'ground.wav')], indirect=['mock_stream'])
 def test_normal(generate_audio_files, mock_stream, config):
-	record.record(Queue(), config)
+	semaphore = Semaphore(1)
+	event = Event()
+	event.set()
+	record.record(Queue(), config, semaphore, event)
 	assert len(os.listdir(get_recording_dir())) == 1
 	recording = read_wav(path.join(get_recording_dir(), os.listdir(get_recording_dir())[0]))
 	original = read_wav(path.join(get_test_recording_dir(), 'ground.wav'))
@@ -189,7 +202,10 @@ def test_normal(generate_audio_files, mock_stream, config):
 # (check file length and contents)
 @pytest.mark.parametrize('mock_stream', [path.join(get_test_recording_dir(), 'tale.wav')], indirect=['mock_stream'])
 def test_too_long(generate_audio_files, mock_stream, config):
-	record.record(Queue(), config)
+	semaphore = Semaphore(1)
+	event = Event()
+	event.set()
+	record.record(Queue(), config, semaphore, event)
 	files = sorted(os.listdir(get_recording_dir()))
 	assert len(files) == 2
 	recording1 = read_wav(path.join(get_recording_dir(), files[0]))
@@ -206,7 +222,10 @@ def test_too_long(generate_audio_files, mock_stream, config):
 # (check file length and contents)
 @pytest.mark.parametrize('mock_stream', [path.join(get_test_recording_dir(), 'star.wav')], indirect=['mock_stream'])
 def test_pauses(generate_audio_files, mock_stream, config):
-	record.record(Queue(), config)
+	semaphore = Semaphore(1)
+	event = Event()
+	event.set()
+	record.record(Queue(), config, semaphore, event)
 	files = sorted(os.listdir(get_recording_dir()))
 	assert len(files) == 2 # the first section of speech is below the length threshold
 	recording1 = read_wav(path.join(get_recording_dir(), files[0]))
@@ -224,7 +243,10 @@ def test_pauses(generate_audio_files, mock_stream, config):
 # test distinguishing speech from background noise
 @pytest.mark.parametrize('mock_stream', [path.join(get_test_recording_dir(), 'noise.wav')], indirect=['mock_stream'])
 def test_noise(generate_audio_files, mock_stream, config):
-	record.record(Queue(), config)
+	semaphore = Semaphore(1)
+	event = Event()
+	event.set()
+	record.record(Queue(), config, semaphore, event)
 	assert len(os.listdir(get_recording_dir())) == 1
 	recording = read_wav(path.join(get_recording_dir(), os.listdir(get_recording_dir())[0]))
 	original = read_wav(path.join(get_test_recording_dir(), 'noise.wav'))
@@ -237,7 +259,10 @@ def test_noise(generate_audio_files, mock_stream, config):
 # test separating multiple voices from silence
 @pytest.mark.parametrize('mock_stream', [path.join(get_test_recording_dir(), 'hello+como.wav')], indirect=['mock_stream'])
 def test_multivoice(generate_audio_files, mock_stream, config):
-	record.record(Queue(), config)
+	semaphore = Semaphore(1)
+	event = Event()
+	event.set()
+	record.record(Queue(), config, semaphore, event)
 	assert len(os.listdir(get_recording_dir())) == 1
 	recording = read_wav(path.join(get_recording_dir(), os.listdir(get_recording_dir())[0]))
 	original = read_wav(path.join(get_test_recording_dir(), 'hello+como.wav'))
@@ -250,7 +275,10 @@ def test_multivoice(generate_audio_files, mock_stream, config):
 # test separating multiple voices from background noise
 @pytest.mark.parametrize('mock_stream', [path.join(get_test_recording_dir(), 'hello+como_noise.wav')], indirect=['mock_stream'])
 def test_multivoice_noise(generate_audio_files, mock_stream, config):
-	record.record(Queue(), config)
+	semaphore = Semaphore(1)
+	event = Event()
+	event.set()
+	record.record(Queue(), config, semaphore, event)
 	assert len(os.listdir(get_recording_dir())) == 1
 	recording = read_wav(path.join(get_recording_dir(), os.listdir(get_recording_dir())[0]))
 	original = read_wav(path.join(get_test_recording_dir(), 'hello+como_noise.wav'))

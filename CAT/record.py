@@ -50,7 +50,7 @@ def queue_audio_buffer(audio_buffer, file_queue, config):
 	file_queue.put(filename)
 
 
-def record(file_queue, config):
+def record(file_queue, config, threads_ready_to_update, setting_update):
 	''' Records and saves detected speech, discarding silence
 	
 		Parameters:
@@ -58,6 +58,10 @@ def record(file_queue, config):
 				queue to add filenames of recordings to
 			config
 				CAT.settings.Config - all settings associated with the program
+			threads_ready_to_update
+				multiprocessing.Semaphore - indicates how many threads are currently ready for a settings update
+			setting_update
+				multiprocessing.Event - indicates whether a settings update is occuring (cleared - occuring, set - not occurring)
 	'''
 
 	# set up
@@ -94,3 +98,9 @@ def record(file_queue, config):
 				# reset to no speech recently detected
 				audio_buffer = []
 				last_speech = None
+		else:
+			# no speech is detected now and no speech has been detected recently
+			# so this is a good time for a settings update
+			threads_ready_to_update.release() # signal that this thread is ready to update settings
+			setting_update.wait() # do not attempt to re-acquire the semaphore until the settings update is complete
+			threads_ready_to_update.acquire() # signal that this thread is no longer ready to update settings

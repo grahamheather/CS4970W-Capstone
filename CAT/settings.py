@@ -68,26 +68,40 @@ class Config():
 		return self.settings[name]
 
 
-	def set(self, name, value):
+	def set(self, name, value, threads_ready_to_update, setting_update):
 		''' Set the value of a setting
 
 			Parameters:
 				name - str, the name of the setting (all lowercase, case sensitive)
 				value - the new value of the setting
+				threads_ready_to_update
+					multiprocessing.Semaphore - indicates how many threads are currently ready for a settings update
+				setting_update
+					multiprocessing.Event - indicates whether a settings update is occuring (cleared - occuring, set - not occurring)
 
 		'''
 
 		# check input
 		if name in calculated_fields:
-			raise 
+			raise
+
+		# have the thread release its own semaphore before updating to prevent deadlock
+		threads_ready_to_update.release()
 
 		# acquire lock to edit
 		self.settings_lock.acquire()
 
+		# notify other processes that a settings update is occurring
+		setting_update.clear()
+
+		# wait until all other processes are ready to update
+		for _ in range(self.get("num_cores")):
+			threads_ready_to_update.acquire()
+
 		# update in active data structure
 		self.settings[name] = value
 
-		# update in self.config
+		# update in config
 		found = False
 		for section in self.config:
 			for key in section:
@@ -98,7 +112,19 @@ class Config():
 			if found == True:
 				break
 
+		# update the config file on disk
 		with open(path.join("CAT", "config.ini"), 'w') as self.config_file:
 			self.config.write(self.config_file)
 
+		# release the other processes to continue
+		for _ in range(self.get("num_cores")):
+			threads_ready_to_update.release()
+
+		# notify other processes that the settings update is over
+		setting_update.set()
+
+		# release lock
 		self.settings_lock.release()
+
+		# have the thread regain its own semaphore
+		threads_ready_to_update.acquire()
