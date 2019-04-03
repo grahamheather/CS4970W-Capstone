@@ -1,3 +1,51 @@
-<p>
-  add-device-sheet works!
-</p>
+
+<form class="add-device-form" name="addDeviceForm" (ngSubmit)="createDevice(addDeviceForm)" #addDeviceForm="ngForm">
+  <div class="title">
+    <mat-icon>perm_device_information</mat-icon>
+    <span>Add device</span>
+  </div>
+  <div class="content">
+    <mat-list>
+      <h3 mat-subheader>Properties</h3>
+      <mat-list-item>
+        <mat-icon mat-list-icon>short_text</mat-icon>
+        <mat-form-field>
+          <input matInput placeholder="Handle" name="handle" maxlength="50" [(ngModel)]="handle" #handleRef="ngModel" required>
+          <mat-error *ngIf="handleRef.hasError('required')">Handle is required</mat-error>
+        </mat-form-field>
+      </mat-list-item>
+      <mat-list-item>
+        <mat-icon mat-list-icon>notes</mat-icon>
+        <mat-form-field>
+          <input matInput placeholder="Description" name="description" maxlength="100">
+        </mat-form-field>
+      </mat-list-item>
+      <mat-list-item>
+        <mat-icon mat-list-icon>place</mat-icon>
+        <mat-form-field>
+          <input matInput placeholder="Location" name="location" maxlength="50">
+        </mat-form-field>
+      </mat-list-item>
+      <mat-list-item>
+        <mat-icon mat-list-icon>language</mat-icon>
+        <mat-form-field>
+          <input matInput placeholder="IP address" [ngModel]="ipAddress" name="ipAddress" #ipAddressRef="ngModel" maxlength="15" pattern="{{ipv4Pattern}}">
+          <mat-error *ngIf="ipAddressRef.hasError('pattern')">Invalid IPv4 address</mat-error>
+        </mat-form-field>
+      </mat-list-item>
+      <mat-divider></mat-divider>
+      <h3 mat-subheader>Settings</h3>
+    </mat-list>
+    <mat-progress-bar class="progress-bar" *ngIf="loading" mode="indeterminate" color="accent"></mat-progress-bar>
+  </div>
+  <div class="actions">
+    <button mat-menu-item type="submit" [disabled]="!addDeviceForm.form.dirty || !addDeviceForm.form.valid">
+      <mat-icon>check</mat-icon>
+      <span>Submit</span>
+    </button>
+    <button mat-menu-item (click)="closeSheet()">
+      <mat-icon>cancel</mat-icon>
+      <span>Cancel</span>
+    </button>
+  </div>
+</form>

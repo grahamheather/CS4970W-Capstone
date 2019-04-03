@@ -44,6 +44,8 @@
     
         mat-card-content {
             flex: 0 1 100%;
+            display: flex;
+            flex-direction: column;
         }
     
         mat-card-actions {
@@ -66,4 +68,12 @@
     position: fixed;
     bottom: 0;
     z-index: 1000;
+}
+
+.spacer {
+    flex: 0 1 100%;
+}
+
+.progress-bar {
+    flex: 0 0 auto;
 }

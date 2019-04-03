@@ -1,0 +1,36 @@
+.add-device-form {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: .5rem;
+
+    .title {
+        align-self: center;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        span {
+            padding-left: .5rem;
+            font-size: 1.5rem;
+        }
+    }
+
+    mat-form-field {
+        flex: 1 1 100%;
+    }
+
+    .content {
+        padding-bottom: 1rem;
+    }
+
+    .actions {
+        display: flex;
+
+        button {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    }
+}

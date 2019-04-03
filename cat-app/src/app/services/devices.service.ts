@@ -1,20 +1,20 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Device } from '../models/device';
 import { map, mergeMap } from 'rxjs/operators';
+import { DeviceSettings } from '../models/device-settings';
 
 @Injectable({
   providedIn: 'root'
 })
 export class DevicesService {
-
-  private url: string = 'http://ec2-18-222-77-3.us-east-2.compute.amazonaws.com/devices';
+  private baseUrl: string = 'http://ec2-18-222-77-3.us-east-2.compute.amazonaws.com';
 
   constructor(private http: HttpClient) { }
 
   getAllDevices(): Observable<Device[]> {
-    return this.http.get<Device[]>(this.url)
+    return this.http.get<Device[]>(`${this.baseUrl}/devices`)
       .pipe(
         map(devices => {
           devices.map(device => {
@@ -31,23 +31,58 @@ export class DevicesService {
   }
 
   updateDevice(device: Device): Observable<Device> {
-    const values = Object.values(device);
-    const pairs = Object.keys(device)
-      .filter((key: string, i: number) => {
-        let tempValues = values;
-        if(!values[i]) {
-          values.splice(i);
-          return false; 
-        }
-        return true;
-      })
-      .map((key: string, i: number) => {
-        return [key, values[i]];
+    return this.http
+      .patch(`${this.baseUrl}/devices/${device.deviceId}`, this.urlEncode(device), {
+        headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')
       });
-    const body = new URLSearchParams(pairs);
+  }
 
-    console.log('pairs: ', pairs);
-    console.log('Body: ', body);
-    return this.http.patch(`${this.url}/${device.deviceId}`, body);
+  private urlEncode(a: any): string {
+    let pairs: string[][] = [];
+    const keys = Object.keys(a);
+    Object.values(a)
+      .forEach((value: any, i) => {
+        if(!value) { return; }
+        pairs.push([keys[i], value]);
+      });
+    return new URLSearchParams(pairs).toString();
+  }
+
+  deleteDevice(device: Device): Observable<Device> {
+    return this.http.delete(`${this.baseUrl}/devices/${device.deviceId}`);
+  }
+
+  updateDeviceSettings(settings: DeviceSettings): Observable<DeviceSettings> {
+    if(!settings.properties) {
+      settings.properties = {};
+    }
+    return this.http
+      .put(`${this.baseUrl}/devices/${settings.deviceId}/settings`, `settings=${JSON.stringify(settings.properties)}`, {
+        headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')
+      }).pipe(
+        map((settings: DeviceSettings) => {
+          settings.createdDate = new Date(settings.createdDate);
+          return settings;
+        })
+      );
+  }
+
+  createDevice(device: Device): Observable<Device> {
+    let settings = {};
+    if(device.settings) {
+      if(device.settings.properties) {
+        settings = device.settings.properties;
+      }
+      device.settings = null;
+    }
+    return this.http.post(`${this.baseUrl}/devices`, `${this.urlEncode(device)}&settings=${JSON.stringify(settings)}`, {
+      headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')
+    }).pipe(
+      map((dev: Device) => {
+        dev.createdDate = new Date(dev.createdDate);
+        dev.settings.createdDate = new Date(dev.settings.createdDate);
+        return dev;
+      })
+    );
   }
 }
