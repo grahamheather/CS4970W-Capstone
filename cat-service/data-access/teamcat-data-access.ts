@@ -147,7 +147,7 @@ export class TeamCatDataAccess {
                     device.settings = { };
                 }
                 device.settings.deviceId = res[0][0].device_id;
-                device.settings.settingsId = res[0][0].settingsId;
+                device.settings.settingsId = res[0][0].settings_id;
                 device.settings.createdDate = res[0][0].created_date;
                 return device;
             })
