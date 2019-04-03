@@ -101,6 +101,7 @@ export class DevicesComponent implements OnInit {
     this.bottomSheet.open(AddDeviceSheetComponent);
     this.bottomSheet._openedBottomSheetRef.afterDismissed()
       .subscribe((dev: Device) => {
+        if(!dev) { return; }
         const card: DeviceCard = {
           device: dev
         }
