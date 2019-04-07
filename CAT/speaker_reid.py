@@ -1,7 +1,6 @@
 import datetime
 import uuid
 from numpy.linalg import norm
-from CAT.settings import *
 
 
 def speaker_distance(mean0, covariance0, mean1, covariance1):
@@ -52,7 +51,7 @@ def add_new_speaker(audio_mean, audio_covariance, speaker_dictionary):
 	return speaker_id
 
 
-def identify_speaker(audio_mean, audio_covariance, speaker_dictionary, speaker_dictionary_lock):
+def identify_speaker(audio_mean, audio_covariance, speaker_dictionary, speaker_dictionary_lock, config):
 	''' Matches a speaker in an audio file to a previously recorded
 		speaker
 
@@ -68,6 +67,8 @@ def identify_speaker(audio_mean, audio_covariance, speaker_dictionary, speaker_d
 				}
 			speaker_dictionary_lock
 				a lock so that multiple processes do not try to read/write/update/delete speakers concurrently
+			config
+				CAT.settings.Config - all settings associated with the program
 		Returns:
 			ID of the speaker in the audio
 	'''
@@ -97,7 +98,7 @@ def identify_speaker(audio_mean, audio_covariance, speaker_dictionary, speaker_d
 		if distance == None: # distance is invalid on all pairs
 			# add a new speaker
 			speaker_id = add_new_speaker(audio_mean, audio_covariance, speaker_dictionary)
-		elif distance <= SPEAKER_REID_DISTANCE_THRESHOLD:
+		elif distance <= config.get("speaker_reid_distance_threshold"):
 			# update speaker values
 			new_speaker_count = speaker_count + 1
 			new_mean = (speaker_mean * speaker_count + audio_mean) / new_speaker_count
@@ -109,11 +110,11 @@ def identify_speaker(audio_mean, audio_covariance, speaker_dictionary, speaker_d
 
 		# remove not recently seen speakers
 		for speaker in list(speaker_dictionary.keys()):
-			if datetime.datetime.now() - speaker_dictionary[speaker][3] > SPEAKER_FORGET_INTERVAL:
+			if datetime.datetime.now() - speaker_dictionary[speaker][3] > config.get("speaker_forget_interval"):
 				speaker_dictionary.pop(speaker, None)
 
 		# if there are too many speakers, remove rarely occuring ones
-		while len(speaker_dictionary) > MAX_NUMBER_OF_SPEAKERS:
+		while len(speaker_dictionary) > config.get("max_number_of_speakers"):
 			deleted = speaker_dictionary.pop(
 				min(speaker_dictionary, key=lambda key: speaker_dictionary.get(key)[2]),
 				None

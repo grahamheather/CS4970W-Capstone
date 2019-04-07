@@ -2,7 +2,6 @@ import shutil
 import os
 import datetime
 import wave
-from CAT.settings import *
 
 
 def get_output_directory():
@@ -28,29 +27,31 @@ def read_file(filename):
 	return audio
 
 
-def save_to_file(data):
+def save_to_file(data, config):
 	''' Saves audio to a file
 
 		Parameters:
 			data
 				the audio to save to the file
 				type: byte string
+			config
+				CAT.settings.Config - all settings associated with the program
 		Returns:
 			the filename (str)
 	'''
 
 	total_bytes, used_bytes, free_bytes = shutil.disk_usage(get_output_directory())
 
-	if free_bytes < MIN_EMPTY_SPACE_IN_BYTES:
+	if free_bytes < config.get("min_empty_space_in_bytes"):
 		raise IOError
 
 	filename = os.path.join(get_output_directory(), "audio{}.wav".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S%f")))
 
 	# save file with unique name indicating date and time
 	wave_file = wave.open(filename, 'wb')
-	wave_file.setnchannels(NUM_CHANNELS)
-	wave_file.setsampwidth(NUM_BYTES)
-	wave_file.setframerate(RATE)
+	wave_file.setnchannels(config.get("num_channels"))
+	wave_file.setsampwidth(config.get("num_bytes"))
+	wave_file.setframerate(config.get("rate"))
 	wave_file.writeframes(data)
 	wave_file.close()
 
