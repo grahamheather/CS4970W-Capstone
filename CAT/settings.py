@@ -131,7 +131,6 @@ def update_settings(config, name, value, threads_ready_to_update, settings_updat
 
 	# wait until all other processes are ready to update
 	for _ in range(config.get("num_cores")):
-		print("ACQUIRING SEMAPHORE", _)
 		threads_ready_to_update.acquire()
 
 	# update setting

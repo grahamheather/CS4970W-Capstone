@@ -8,6 +8,7 @@ import multiprocessing
 import time
 import wave
 from multiprocessing.managers import BaseManager
+from shutil import copyfile
 
 from CAT import scheduling, record
 
@@ -94,7 +95,8 @@ def test_load_settings():
 		all(type(result.settings[name]) == int for name in
 			["milliseconds_per_second", "num_cores", "min_empty_space_in_bytes",
 				"vad_level", "num_bytes", "num_channels", "rate", "vad_frame_ms",
-				"max_speakers", "speaker_reid_distance_threshold", "max_number_of_speakers"
+				"max_speakers", "speaker_reid_distance_threshold", "max_number_of_speakers",
+				"device_id"
 			]				
 		),
 		all(type(result.settings[name]) == float for name in
@@ -364,6 +366,10 @@ def test_save_settings_no_semaphore_boolean(monkeypatch):
 # test managing processes and pause recording while updating settings
 @pytest.mark.parametrize('mock_stream', [os.path.join(get_test_recording_dir(), 'settings_twice.wav')], indirect=['mock_stream'])
 def test_save_settings_manage_processes(mock_stream, monkeypatch):
+	# make new config file that can be edited
+	testing_config_file = os.path.join(get_test_recording_dir(), "test_temp.ini")
+	copyfile(os.path.join(get_package_dir(), settings.FILENAME), testing_config_file)
+	monkeypatch.setattr(settings, "FILENAME", os.path.join("..", testing_config_file))
 
 	# set mocks
 	analysis_calls = multiprocessing.Queue()
@@ -372,69 +378,76 @@ def test_save_settings_manage_processes(mock_stream, monkeypatch):
 	monkeypatch.setattr(scheduling, "analyze_audio_file", analyze_mock)
 
 	transmission_calls = multiprocessing.Queue()
-	def transmission_mock(config, threads_ready_to_update, setting_update):
+	def transmission_mock(config, threads_ready_to_update, settings_update_event):
 		transmission_calls.put(config.get("device_id"))
 	monkeypatch.setattr(scheduling.transmission, "check_for_updates", transmission_mock)
 
-	# initialize config
-	BaseManager.register('Config', settings.Config)
-	config_manager = BaseManager()
-	config_manager.start()
-	config = config_manager.Config()
+	queue_calls = multiprocessing.Queue()
+	original_function = record.queue_audio_buffer
+	def queue_mock(audio_buffer, file_queue, config):
+		queue_calls.put(config.get("device_id"))
+		original_function(audio_buffer, file_queue, config)
+	with mock.patch("CAT.record.queue_audio_buffer", wraps=queue_mock):
 
-	# mock filename so it saves in a different file to examine
-	monkeypatch.setattr(settings, "FILENAME", "test_temp.ini")
+		# initialize config
+		BaseManager.register('Config', settings.Config)
+		config_manager = BaseManager()
+		config_manager.start()
+		config = config_manager.Config()
+		
+		# multiprocess shared parameters
+		process_manager = multiprocessing.Manager()
+		speaker_dictionary = process_manager.dict()
+		settings_update_event = multiprocessing.Event()
+		settings_update_event.set()
+		threads_ready_to_update = multiprocessing.Semaphore(config.get("num_cores") - 3)
+		settings_update_lock = multiprocessing.Lock()
+		speaker_dictionary_lock = multiprocessing.Lock()
+		file_queue = multiprocessing.Queue() # thread-safe FIFO queue
 
-	# multiprocess shared parameters
-	process_manager = multiprocessing.Manager()
-	speaker_dictionary = process_manager.dict()
-	setting_update = multiprocessing.Event()
-	setting_update.set()
-	print(config.get("num_cores"))
-	threads_ready_to_update = multiprocessing.Semaphore(config.get("num_cores") - 3)
-	settings_update_lock = multiprocessing.Lock()
-	speaker_dictionary_lock = multiprocessing.Lock()
-	file_queue = multiprocessing.Queue() # thread-safe FIFO queue
+		# start updating a setting
+		process = multiprocessing.Process(target=settings.update_settings, args=(config, "device_id", 9876, threads_ready_to_update, settings_update_event, settings_update_lock))
+		process.start()
 
-	# start updating a setting
-	process = multiprocessing.Process(target=settings.update_settings, args=(config, "device_id", 9876, threads_ready_to_update, setting_update, settings_update_lock))
-	process.start()
+		# start the process (just one of each)
+		recording_process = multiprocessing.Process(target=record.record, args=(file_queue, config, threads_ready_to_update, settings_update_event))
+		recording_process.start()
+		analysis_process = multiprocessing.Process(target=scheduling.analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock, config, threads_ready_to_update, settings_update_event, settings_update_lock))
+		analysis_process.start()
 
-	# start the process (just one of each)
-	recording_process = multiprocessing.Process(target=record.record, args=(file_queue, config, threads_ready_to_update, setting_update))
-	recording_process.start()
-	analysis_process = multiprocessing.Process(target=scheduling.analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock, config, threads_ready_to_update, setting_update))
-	analysis_process.start()
+		# give the Processes time to run
+		time.sleep(2)
 
-	# give the Processes time to run
-	time.sleep(2)
+		# terminate all processes
+		process.terminate()
+		recording_process.terminate()
+		analysis_process.terminate()
 
-	# terminate all processes
-	process.terminate()
-	recording_process.terminate()
-	analysis_process.terminate()
+		# check that the setting was updated
+		assert config.get("device_id") == 9876
 
-	# check that the setting was updated
-	assert config.get("device_id") == 9876
+		# clean up
+		config_manager.shutdown()
 
-	# clean up
-	config_manager.shutdown()
+		# check that setting was updated when expected
+		assert analysis_calls.qsize() == 2
+		assert analysis_calls.get() == 0
+		assert analysis_calls.get() == 9876
+		assert transmission_calls.qsize() == 2
+		assert transmission_calls.get() == 0
+		assert transmission_calls.get() == 9876
+		assert queue_calls.qsize() == 2
+		assert queue_calls.get() == 0
+		assert queue_calls.get() == 9876
+		
 
-	# check that setting was updated when expected
-	assert analysis_calls.qsize() == 2
-	assert analysis_calls.get() == 0
-	assert analysis_calls.get() == 9876
-	assert transmission_calls.qsize() == 2
-	assert transmission_calls.get() == 0
-	assert transmission_calls.get() == 9876
-	
-	# test file created
-	#assert "test_temp.ini" in os.listdir(get_package_dir())
+		# test that the setting appears in the file
+		file = open(testing_config_file, 'r')
+		assert "device_id = 9876" in file.read()
 
-	# test that the setting appears in the file
-	#file = open(os.path.join(get_package_dir(), "test_temp.ini"), 'r')
-	#assert "{} = 500".format(new_setting) in file.read()
+		# check that new setting reads properly
+		config2 = settings.Config()
+		assert config2.get("device_id") == 9876
 
-	# check that new setting reads properly
-	config2 = settings.Config()
-	assert config2.get("device_id") == 9876
+		# clean up
+		os.remove(testing_config_file)

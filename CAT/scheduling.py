@@ -2,7 +2,8 @@
 # prevents more than one thread running at a time.
 # This allows the program to, ideally, take advantage of multiple
 # cores on the Raspberry Pi.
-from multiprocessing import Process, Queue, Manager, Value, Lock, Array, Event, Semaphore
+from multiprocessing import Process, Queue, Manager, Value, Lock, Event, Semaphore
+from multiprocessing.managers import BaseManager
 
 import os
 
@@ -44,7 +45,7 @@ def analyze_audio_file(filename, speaker_dictionary, speaker_dictionary_lock, co
 			os.remove(filename)
 
 
-def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock, config, threads_ready_to_update, setting_update):
+def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock, config, threads_ready_to_update, settings_update_event, settings_update_lock):
 	''' Analyzes files of audio extracting and processing speech
 
 		Parameters:
@@ -58,8 +59,11 @@ def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock,
 				CAT.settings.Config - all settings associated with the program
 			threads_ready_to_update
 				multiprocessing.Semaphore - indicates how many threads are currently ready for a settings update
-			setting_update
+			settings_update_event
 				multiprocessing.Event - indicates whether a settings update is occuring (cleared - occuring, set - not occurring)
+			settings_update_lock
+				multiprocessing.Lock - allows only one process to update settings at a time (prevents semaphore acquisition deadlock)
+
 	'''
 
 	# analysis processes process files indefinitely
@@ -67,8 +71,6 @@ def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock,
 
 		# block until a file is available in the queue
 		filename = file_queue.get()
-
-		print("PROCESSING FILE")
 		
 		# process the file
 		analyze_audio_file(filename, speaker_dictionary, speaker_dictionary_lock, config)
@@ -76,32 +78,40 @@ def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock,
 		# delete the file
 		os.remove(filename)
 
-		transmission.check_for_updates(config, threads_ready_to_update, setting_update)
+		transmission.check_for_updates(config, threads_ready_to_update, settings_update_event)
 
 		# no files being processed
 		# so this is a good time for a settings update
 		threads_ready_to_update.release() # signal that this thread is ready to update settings
-		setting_update.wait() # do not attempt to re-acquire the semaphore until the settings update is complete
+		settings_update_event.wait() # do not attempt to re-acquire the semaphore until the settings update is complete
 		threads_ready_to_update.acquire() # signal that this thread is no longer ready to update settings
 
 
 def start_processes():
 	''' Starts all process of the program '''
-	config = settings.Config()
+
+	# initialize a multiprocessing Config object
+	BaseManager.register('Config', settings.Config)
+	config_manager = BaseManager()
+	config_manager.start()
+	config = config_manager.Config()
 
 	process_manager = Manager()
 	speaker_dictionary = process_manager.dict()
-	setting_update = Event()
-	setting_update.set()
+	settings_update_event = Event()
+	settings_update_event.set()
 	threads_ready_to_update = Semaphore(0)
+	settings_update_lock = Lock()
 	speaker_dictionary_lock = Lock()
 	file_queue = Queue() # thread-safe FIFO queue
 
 	# ideally of the cores should run the record.recording process
 	# and the other cores will run the analysis processes
-	recording_process = Process(target=record.record, args=(file_queue, config, threads_ready_to_update, setting_update))
+	recording_process = Process(target=record.record, args=(file_queue, config, threads_ready_to_update, settings_update_event))
 	recording_process.start()
-	analysis_processes = [Process(target=analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock, config, threads_ready_to_update, setting_update)) for _ in range(config.get("num_cores") - 1)]
+	analysis_processes = [Process(target=analyze_audio_files, args=(
+			file_queue, speaker_dictionary, speaker_dictionary_lock, config, threads_ready_to_update, settings_update_event, settings_update_lock)
+		) for _ in range(config.get("num_cores") - 1)]
 	for process in analysis_processes:
 		process.start()
 

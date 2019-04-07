@@ -38,7 +38,7 @@ def test_start_processes(monkeypatch, config):
 
 	def increment_recording_process_counter(q, c, s, e):
 		assert type(q) == multiprocessing.queues.Queue
-		assert type(c) == settings.Config
+		assert str(type(c)) == "<class 'multiprocessing.managers.AutoProxy[Config]'>" # type isn't registered yet
 		assert type(s) == multiprocessing.synchronize.Semaphore
 		assert type(e) == multiprocessing.synchronize.Event
 		global recording_process_counter
@@ -51,13 +51,14 @@ def test_start_processes(monkeypatch, config):
 	global analysis_process_counter
 	analysis_process_counter = multiprocessing.Value('i', 0)
 
-	def increment_analysis_process_counter(q, d, l, c, s, e):
+	def increment_analysis_process_counter(q, d, l, c, s, e, l2):
 		assert type(q) == multiprocessing.queues.Queue
 		assert type(d) == multiprocessing.managers.DictProxy
 		assert type(l) == multiprocessing.synchronize.Lock
-		assert type(c) == settings.Config
+		assert str(type(c)) == "<class 'multiprocessing.managers.AutoProxy[Config]'>" # type isn't registered yet
 		assert type(s) == multiprocessing.synchronize.Semaphore
 		assert type(e) == multiprocessing.synchronize.Event
+		assert type(l2) == multiprocessing.synchronize.Lock
 		global analysis_process_counter
 		with analysis_process_counter.get_lock():
 			analysis_process_counter.value += 1
@@ -84,6 +85,7 @@ def test_analyze_audio_files(monkeypatch, config):
 	semaphore = multiprocessing.Semaphore(1)
 	event = multiprocessing.Event()
 	event.set()
+	lock = multiprocessing.Lock()
 
 	# replace the audio analysis function with placing the filename that would have been processed into a queue
 	# also check that unused arguments are appropriate
@@ -110,7 +112,8 @@ def test_analyze_audio_files(monkeypatch, config):
 	assert file_queue.qsize() == len(filenames)
 
 	# start the audio analysis Process
-	process = multiprocessing.Process(target=scheduling.analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock, config, semaphore, event))
+	process = multiprocessing.Process(target=scheduling.analyze_audio_files, args=(
+		file_queue, speaker_dictionary, speaker_dictionary_lock, config, semaphore, event, lock))
 	process.start()
 
 	# give the Process sufficient time to iterate over all files
@@ -141,6 +144,7 @@ def test_analyze_audio_files_late_add(monkeypatch, config):
 	semaphore = multiprocessing.Semaphore(1)
 	event = multiprocessing.Event()
 	event.set()
+	lock = multiprocessing.Lock()
 
 	# replace the audio analysis function with placing the filename that would have been processed into a queue
 	processed_files = multiprocessing.Queue()
@@ -150,7 +154,8 @@ def test_analyze_audio_files_late_add(monkeypatch, config):
 	file_queue = multiprocessing.Queue()
 
 	# start the audio analysis Process
-	process = multiprocessing.Process(target=scheduling.analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock, config, semaphore, event))
+	process = multiprocessing.Process(target=scheduling.analyze_audio_files, args=(
+		file_queue, speaker_dictionary, speaker_dictionary_lock, config, semaphore, event, lock))
 	process.start()
 
 	# wait a small amount of time
