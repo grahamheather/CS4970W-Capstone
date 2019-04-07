@@ -49,6 +49,8 @@ def queue_audio_buffer(audio_buffer, file_queue, config):
 	# add the new file to the processing queue
 	file_queue.put(filename)
 
+	print("ADDING FILE!")
+
 
 def record(file_queue, config, threads_ready_to_update, setting_update):
 	''' Records and saves detected speech, discarding silence

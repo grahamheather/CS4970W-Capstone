@@ -1,5 +1,7 @@
 import pytest
 import unittest.mock as mock
+
+# supporting libraries
 import multiprocessing
 import time
 import os
@@ -18,7 +20,7 @@ def run_forever(arg):
 
 # FIXTURES
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture()
 def config():
 	return settings.Config()
 
@@ -225,7 +227,7 @@ def test_analyze_audio_file_speaker_diarization(identify_speakers_mock, extract_
 	])
 
 
-# Test that audio file analysis extracts features and transmits (without speaker diarization)
+# test that audio file analysis extracts features and transmits (without speaker diarization)
 @mock.patch('CAT.scheduling.os.remove')
 @mock.patch('CAT.scheduling.transmission.transmit')
 @mock.patch('CAT.scheduling.feature_extraction.extract_features')

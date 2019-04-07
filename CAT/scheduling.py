@@ -67,6 +67,8 @@ def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock,
 
 		# block until a file is available in the queue
 		filename = file_queue.get()
+
+		print("PROCESSING FILE")
 		
 		# process the file
 		analyze_audio_file(filename, speaker_dictionary, speaker_dictionary_lock, config)
@@ -97,14 +99,14 @@ def start_processes():
 
 	# ideally of the cores should run the record.recording process
 	# and the other cores will run the analysis processes
-	record.recording_process = Process(target=record.record, args=(file_queue, config, threads_ready_to_update, setting_update))
-	record.recording_process.start()
+	recording_process = Process(target=record.record, args=(file_queue, config, threads_ready_to_update, setting_update))
+	recording_process.start()
 	analysis_processes = [Process(target=analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock, config, threads_ready_to_update, setting_update)) for _ in range(config.get("num_cores") - 1)]
 	for process in analysis_processes:
 		process.start()
 
 	# block until the record.recording process exits (never, unless error)
-	record.recording_process.join()
+	recording_process.join()
 
 
 if __name__ == '__main__':

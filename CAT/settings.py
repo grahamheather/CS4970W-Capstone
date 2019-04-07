@@ -4,6 +4,8 @@ import configparser
 from multiprocessing import Lock
 from os import path
 
+FILENAME = "config.ini"
+
 
 class Config():
 	''' A class to contain all of the data and functions associated with
@@ -17,7 +19,7 @@ class Config():
 
 		# read settings file
 		self.config = configparser.ConfigParser()
-		self.config.read(path.join("CAT", "config.ini"))
+		self.config.read(path.join("CAT", FILENAME))
 
 		# read by value type
 		for key in self.config["Integer Values"]:
@@ -30,7 +32,7 @@ class Config():
 			self.settings[key] = datetime.timedelta(days=int(self.config["Day Values"][key]))
 
 		# calculated values
-		calculated_fields = set(["vad_frame_size", "vad_frame_bytes", "format", "periodic_sample_frames", "min_sample_frames", "max_sample_frames", "max_silence_frames"])
+		self.calculated_fields = set(["vad_frame_size", "vad_frame_bytes", "format", "periodic_sample_frames", "min_sample_frames", "max_sample_frames", "max_silence_frames"])
 		# audio recording self.settings
 		self.settings["vad_frame_size"] = int(
 			self.settings["rate"] * self.settings["vad_frame_ms"] / self.settings["milliseconds_per_second"]
@@ -82,8 +84,8 @@ class Config():
 		'''
 
 		# check input
-		if name in calculated_fields:
-			raise
+		if name in self.calculated_fields:
+			raise ValueError("Calculated fields cannot be manually set")
 
 		# have the thread release its own semaphore before updating to prevent deadlock
 		threads_ready_to_update.release()
@@ -98,22 +100,27 @@ class Config():
 		for _ in range(self.get("num_cores")):
 			threads_ready_to_update.acquire()
 
+		print("SETTING CONFIG")
+
 		# update in active data structure
 		self.settings[name] = value
 
 		# update in config
 		found = False
 		for section in self.config:
-			for key in section:
+			for key in self.config[section]:
 				if key == name:
-					self.config[section][key] == str(value)
+					if type(value) == datetime.timedelta:
+						self.config.set(section, key, str(value.days))
+					else:
+						self.config.set(section, key, str(value))
 					found = True
 					break
 			if found == True:
 				break
 
 		# update the config file on disk
-		with open(path.join("CAT", "config.ini"), 'w') as self.config_file:
+		with open(path.join("CAT", FILENAME), 'w') as self.config_file:
 			self.config.write(self.config_file)
 
 		# release the other processes to continue
@@ -128,3 +135,5 @@ class Config():
 
 		# have the thread regain its own semaphore
 		threads_ready_to_update.acquire()
+
+		print(self.get("test_setting"))

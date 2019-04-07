@@ -54,7 +54,7 @@ def generate_audio_files():
 	return stats
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture()
 def config():
 	return settings.Config()
 
@@ -232,7 +232,7 @@ def test_pauses(generate_audio_files, mock_stream, config):
 	recording2 = read_wav(path.join(get_recording_dir(), files[1]))
 	original = read_wav(path.join(get_test_recording_dir(), 'star.wav'))
 	((start1, end1), (start2, end2)) = generate_audio_files["star"]
-	desired_speech1 = original[start1 + 1000:end1 - 1000]
+	desired_speech1 = original[start1 + 20000:end1 - 20000]
 	desired_speech2 = original[start2 + 5000:end2 - 20000]
 	assert desired_speech1 in recording1
 	assert desired_speech2 in recording2

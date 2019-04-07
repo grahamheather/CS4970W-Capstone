@@ -342,6 +342,20 @@ def generate_test_diarization_audio(folder):
 	return stats
 
 
+def generate_settings_speech_twice(filename):
+	# generate text-to-speech
+	speech =  generate_speech("Hello, how are you?", "en", filename)
+
+	# add silence and save
+	silence = AudioSegment.silent(duration=MAX_SAMPLE_LENGTH*MILLISECONDS_PER_SECOND + MARGIN).set_frame_rate(RATE)
+	audio  = speech + silence + silence + silence + speech + silence + silence + silence
+	audio.export(filename, format="wav")
+
+
+def generate_test_settings_audio(folder):
+	generate_settings_speech_twice(path.join(folder, "settings_twice.wav"))
+
+
 def generate_speaker_id_same_recording(filename):
 	file_path, file_extension = path.splitext(filename)
 

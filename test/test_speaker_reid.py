@@ -21,7 +21,7 @@ def get_test_recording_dir():
 
 # FIXTURES
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture()
 def config():
 	return settings.Config()
 

@@ -46,7 +46,7 @@ def generate_audio_files():
 	return stats
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture()
 def config():
 	return settings.Config()
 
