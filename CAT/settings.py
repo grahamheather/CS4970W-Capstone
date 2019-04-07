@@ -54,8 +54,6 @@ class Config():
 			self.settings["max_silence_length"] * self.settings["milliseconds_per_second"] / self.settings["vad_frame_ms"]
 		)
 
-		self.settings_lock = Lock()
-
 
 	def get(self, name):
 		''' Get the value of a setting
@@ -70,37 +68,18 @@ class Config():
 		return self.settings[name]
 
 
-	def set(self, name, value, threads_ready_to_update, setting_update):
+	def set(self, name, value):
 		''' Set the value of a setting
 
 			Parameters:
 				name - str, the name of the setting (all lowercase, case sensitive)
 				value - the new value of the setting
-				threads_ready_to_update
-					multiprocessing.Semaphore - indicates how many threads are currently ready for a settings update
-				setting_update
-					multiprocessing.Event - indicates whether a settings update is occuring (cleared - occuring, set - not occurring)
-
 		'''
 
 		# check input
 		if name in self.calculated_fields:
 			raise ValueError("Calculated fields cannot be manually set")
 
-		# have the thread release its own semaphore before updating to prevent deadlock
-		threads_ready_to_update.release()
-
-		# acquire lock to edit
-		self.settings_lock.acquire()
-
-		# notify other processes that a settings update is occurring
-		setting_update.clear()
-
-		# wait until all other processes are ready to update
-		for _ in range(self.get("num_cores")):
-			threads_ready_to_update.acquire()
-
-		print("SETTING CONFIG")
 
 		# update in active data structure
 		self.settings[name] = value
@@ -123,17 +102,50 @@ class Config():
 		with open(path.join("CAT", FILENAME), 'w') as self.config_file:
 			self.config.write(self.config_file)
 
-		# release the other processes to continue
-		for _ in range(self.get("num_cores")):
-			threads_ready_to_update.release()
 
-		# notify other processes that the settings update is over
-		setting_update.set()
 
-		# release lock
-		self.settings_lock.release()
+def update_settings(config, name, value, threads_ready_to_update, settings_update_event, settings_update_lock):
+	''' Coordinate multiple processes while updating settings
 
-		# have the thread regain its own semaphore
+		Parameters:
+			config - CAT.settings.Config, the config file to update the setting in
+			name - str, the name of the setting (all lowercase, case sensitive)
+			value - the new value of the setting
+			threads_ready_to_update
+				multiprocessing.Semaphore - indicates how many threads are currently ready for a settings update
+			setting_update
+				multiprocessing.Event - indicates whether a settings update is occuring (cleared - occuring, set - not occurring)
+			settings_update_lock
+				multiprocessing.Lock - allows only one process to update settings at a time (prevents semaphore acquisition deadlock)
+
+	'''
+
+	# have the thread release its own semaphore before updating to prevent deadlock
+	threads_ready_to_update.release()
+
+	# acquire lock to edit
+	settings_update_lock.acquire()
+
+	# notify other processes that a settings update is occurring
+	settings_update_event.clear()
+
+	# wait until all other processes are ready to update
+	for _ in range(config.get("num_cores")):
+		print("ACQUIRING SEMAPHORE", _)
 		threads_ready_to_update.acquire()
 
-		print(self.get("test_setting"))
+	# update setting
+	config.set(name, value)
+
+	# release the other processes to continue
+	for _ in range(config.get("num_cores")):
+		threads_ready_to_update.release()
+
+	# notify other processes that the settings update is over
+	settings_update_event.set()
+
+	# release lock
+	settings_update_lock.release()
+
+	# have the thread regain its own semaphore
+	threads_ready_to_update.acquire()

@@ -139,9 +139,10 @@ def test_save_settings_integer(monkeypatch):
 	semaphore = multiprocessing.Semaphore(config.get("num_cores"))
 	event = multiprocessing.Event()
 	event.set()
+	lock = multiprocessing.Lock()
 
 	# call function
-	config.set(new_setting, new_value, semaphore, event)
+	settings.update_settings(config, new_setting, new_value, semaphore, event, lock)
 
 	# test that the event is reset
 	assert event.is_set()
@@ -149,6 +150,9 @@ def test_save_settings_integer(monkeypatch):
 	# test that all semaphores were released
 	for _ in range(config.get("num_cores")):
 		semaphore.acquire()
+
+	# test that the lock was released
+	lock.acquire()
 
 	# test that setting is updated in program
 	assert config.get(new_setting) == new_value
@@ -179,9 +183,10 @@ def test_save_settings_float(monkeypatch):
 	semaphore = multiprocessing.Semaphore(config.get("num_cores"))
 	event = multiprocessing.Event()
 	event.set()
+	lock = multiprocessing.Lock()
 
 	# call function
-	config.set(new_setting, new_value, semaphore, event)
+	settings.update_settings(config, new_setting, new_value, semaphore, event, lock)
 
 	# test that the event is reset
 	assert event.is_set()
@@ -189,6 +194,9 @@ def test_save_settings_float(monkeypatch):
 	# test that all semaphores were released
 	for _ in range(config.get("num_cores")):
 		semaphore.acquire()
+
+	# test that the lock was released
+	lock.acquire()
 
 	# test that setting is updated in program
 	assert config.get(new_setting) == new_value
@@ -219,9 +227,10 @@ def test_save_settings_boolean(monkeypatch):
 	semaphore = multiprocessing.Semaphore(config.get("num_cores"))
 	event = multiprocessing.Event()
 	event.set()
+	lock = multiprocessing.Lock()
 
 	# call function
-	config.set(new_setting, new_value, semaphore, event)
+	settings.update_settings(config, new_setting, new_value, semaphore, event, lock)
 
 	# test that the event is reset
 	assert event.is_set()
@@ -229,6 +238,9 @@ def test_save_settings_boolean(monkeypatch):
 	# test that all semaphores were released
 	for _ in range(config.get("num_cores")):
 		semaphore.acquire()
+
+	# test that the lock was released
+	lock.acquire()
 
 	# test that setting is updated in program
 	assert config.get("speaker_diarization") == True
@@ -259,9 +271,10 @@ def test_save_settings_day(monkeypatch):
 	semaphore = multiprocessing.Semaphore(config.get("num_cores"))
 	event = multiprocessing.Event()
 	event.set()
+	lock = multiprocessing.Lock()
 
 	# call function
-	config.set(new_setting, new_value, semaphore, event)
+	settings.update_settings(config, new_setting, new_value, semaphore, event, lock)
 
 	# test that the event is reset
 	assert event.is_set()
@@ -269,6 +282,9 @@ def test_save_settings_day(monkeypatch):
 	# test that all semaphores were released
 	for _ in range(config.get("num_cores")):
 		semaphore.acquire()
+
+	# test that the lock was released
+	lock.acquire()
 
 	# test that setting is updated in program
 	assert config.get(new_setting) == new_value
@@ -299,17 +315,11 @@ def test_save_settings_calculated(monkeypatch):
 	semaphore = multiprocessing.Semaphore(config.get("num_cores"))
 	event = multiprocessing.Event()
 	event.set()
+	lock = multiprocessing.Lock()
 
 	# call function, test that an error is raised
 	with pytest.raises(ValueError):
-		config.set(new_setting, new_value, semaphore, event)
-
-	# test that the event is reset
-	assert event.is_set()
-
-	# test that all semaphores were released
-	for _ in range(config.get("num_cores")):
-		semaphore.acquire()
+		settings.update_settings(config, new_setting, new_value, semaphore, event, lock)
 
 	# test that setting is not updated in program
 	assert not config.get(new_setting) == new_value
@@ -332,9 +342,10 @@ def test_save_settings_no_semaphore_boolean(monkeypatch):
 	semaphore = multiprocessing.Semaphore(config.get("num_cores") - 2) # the process will release one semaphore itself
 	event = multiprocessing.Event()
 	event.set()
+	lock = multiprocessing.Lock()
 
 	# call function
-	process = multiprocessing.Process(target=config.set, args=(new_setting, new_value, semaphore, event))
+	process = multiprocessing.Process(target=settings.update_settings, args=(config, new_setting, new_value, semaphore, event, lock))
 	process.start()
 
 	# give the Process time to finish the updatep
@@ -352,14 +363,18 @@ def test_save_settings_no_semaphore_boolean(monkeypatch):
 
 # test managing processes and pause recording while updating settings
 @pytest.mark.parametrize('mock_stream', [os.path.join(get_test_recording_dir(), 'settings_twice.wav')], indirect=['mock_stream'])
-#@mock.patch("CAT.scheduling.analyze_audio_file")
-#@mock.patch("CAT.scheduling.os.remove")
-#@mock.patch("CAT.scheduling.transmission.check_for_updates")
-def test_save_settings_manage_processes(mock_stream, monkeypatch): #transmission_update_mock, remove_mock, analyze_mock, mock_stream, monkeypatch):
-	analyze_mock = mock.Mock()
+def test_save_settings_manage_processes(mock_stream, monkeypatch):
+
+	# set mocks
+	analysis_calls = multiprocessing.Queue()
+	def analyze_mock(file_queue, speaker_dictionary, speaker_dictionary_lock, configs):
+		analysis_calls.put(config.get("device_id"))
 	monkeypatch.setattr(scheduling, "analyze_audio_file", analyze_mock)
 
-	#analyze_mock("random")
+	transmission_calls = multiprocessing.Queue()
+	def transmission_mock(config, threads_ready_to_update, setting_update):
+		transmission_calls.put(config.get("device_id"))
+	monkeypatch.setattr(scheduling.transmission, "check_for_updates", transmission_mock)
 
 	# initialize config
 	BaseManager.register('Config', settings.Config)
@@ -367,30 +382,22 @@ def test_save_settings_manage_processes(mock_stream, monkeypatch): #transmission
 	config_manager.start()
 	config = config_manager.Config()
 
-
-	semaphore = multiprocessing.Semaphore(config.get("num_cores") - 1)
-	event = multiprocessing.Event()
-	event.set()
-	# add a new test variable
-	#multiprocessing.Process(target=config.set, args=("test_setting", 123))
-	config.set(
-		"test_setting", 
-		12345, 
-		semaphore,
-		event
-	)
+	# mock filename so it saves in a different file to examine
+	monkeypatch.setattr(settings, "FILENAME", "test_temp.ini")
 
 	# multiprocess shared parameters
 	process_manager = multiprocessing.Manager()
 	speaker_dictionary = process_manager.dict()
 	setting_update = multiprocessing.Event()
 	setting_update.set()
+	print(config.get("num_cores"))
 	threads_ready_to_update = multiprocessing.Semaphore(config.get("num_cores") - 3)
+	settings_update_lock = multiprocessing.Lock()
 	speaker_dictionary_lock = multiprocessing.Lock()
 	file_queue = multiprocessing.Queue() # thread-safe FIFO queue
 
 	# start updating a setting
-	process = multiprocessing.Process(target=config.set, args=("test_setting", 9876, threads_ready_to_update, setting_update))
+	process = multiprocessing.Process(target=settings.update_settings, args=(config, "device_id", 9876, threads_ready_to_update, setting_update, settings_update_lock))
 	process.start()
 
 	# start the process (just one of each)
@@ -400,13 +407,34 @@ def test_save_settings_manage_processes(mock_stream, monkeypatch): #transmission
 	analysis_process.start()
 
 	# give the Processes time to run
-	time.sleep(1)
+	time.sleep(2)
 
+	# terminate all processes
+	process.terminate()
 	recording_process.terminate()
 	analysis_process.terminate()
 
-	#print(analyze_mock.mock_calls)
-	#print(transmission_update_mock.mock_calls)
-	#print(remove_mock.mock_calls)
-	print(config.get("test_setting"))
-	assert False
+	# check that the setting was updated
+	assert config.get("device_id") == 9876
+
+	# clean up
+	config_manager.shutdown()
+
+	# check that setting was updated when expected
+	assert analysis_calls.qsize() == 2
+	assert analysis_calls.get() == 0
+	assert analysis_calls.get() == 9876
+	assert transmission_calls.qsize() == 2
+	assert transmission_calls.get() == 0
+	assert transmission_calls.get() == 9876
+	
+	# test file created
+	#assert "test_temp.ini" in os.listdir(get_package_dir())
+
+	# test that the setting appears in the file
+	#file = open(os.path.join(get_package_dir(), "test_temp.ini"), 'r')
+	#assert "{} = 500".format(new_setting) in file.read()
+
+	# check that new setting reads properly
+	config2 = settings.Config()
+	assert config2.get("device_id") == 9876

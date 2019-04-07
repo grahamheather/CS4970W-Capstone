@@ -103,6 +103,7 @@ def record(file_queue, config, threads_ready_to_update, setting_update):
 		else:
 			# no speech is detected now and no speech has been detected recently
 			# so this is a good time for a settings update
+			print(config.get("device_id"))
 			threads_ready_to_update.release() # signal that this thread is ready to update settings
 			setting_update.wait() # do not attempt to re-acquire the semaphore until the settings update is complete
 			threads_ready_to_update.acquire() # signal that this thread is no longer ready to update settings
