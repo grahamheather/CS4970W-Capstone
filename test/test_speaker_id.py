@@ -7,6 +7,7 @@ import os
 import multiprocessing
 import pickle
 import numpy
+import uuid
 
 from CAT import settings
 
@@ -66,7 +67,10 @@ def cleanup():
 
 # Test that a previously seen speaker can be identified in a new recording
 @pytest.mark.filterwarnings("ignore:")
-def test_identify_speakers_same_recording(generate_audio_files, config):
+@mock.patch("CAT.speaker_id.speaker_reid.transmission.update_speaker")
+def test_identify_speakers_same_recording(update_speaker_mock, monkeypatch, generate_audio_files, config):
+	monkeypatch.setattr("CAT.speaker_id.speaker_reid.transmission.register_speaker", lambda c, m, cov: str(uuid.uuid4()))
+
 	# The speaker diarization module is unstable.
 	# It is provided as an extra feature to be improved and developed upon.
 	# As such the realistic tests for it are equally unstable.
@@ -103,7 +107,10 @@ def test_identify_speakers_same_recording(generate_audio_files, config):
 
 # Test differentiating a new speaker from previously seen ones in recordings
 @pytest.mark.filterwarnings("ignore:")
-def test_identify_speakers_new_speaker(generate_audio_files, config):
+@mock.patch("CAT.speaker_id.speaker_reid.transmission.update_speaker")
+def test_identify_speakers_new_speaker(update_speaker_mock, monkeypatch, generate_audio_files, config):
+	monkeypatch.setattr("CAT.speaker_id.speaker_reid.transmission.register_speaker", lambda c, m, cov: str(uuid.uuid4()))
+
 	# The speaker diarization module is unstable.
 	# It is provided as an extra feature to be improved and developed upon.
 	# As such the realistic tests for it are equally unstable.

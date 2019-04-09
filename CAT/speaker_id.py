@@ -1,6 +1,4 @@
-from CAT import diarization
-from CAT import speaker_reid
-from CAT import utilities
+from CAT import diarization, speaker_reid, utilities
 
 
 def identify_speakers(filename, speaker_dictionary, speaker_dictionary_lock, config):

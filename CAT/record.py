@@ -64,6 +64,9 @@ def record(file_queue, config, threads_ready_to_update, settings_update_event):
 				multiprocessing.Event - indicates whether a settings update is occuring (cleared - occuring, set - not occurring)
 	'''
 
+	# acquire the semaphore indicating thread is starting
+	threads_ready_to_update.acquire()
+
 	# set up
 	stream = open_stream(config)
 	vad = webrtcvad.Vad(config.get("vad_level"))

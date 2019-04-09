@@ -109,6 +109,9 @@ def test_load_settings():
 		),
 		all(type(result.settings[name]) == datetime.timedelta for name in
 			["speaker_forget_interval"]
+		),
+		all(type(result.settings[name]) == str for name in
+			["server"]
 		)
 	])
 
@@ -127,8 +130,15 @@ def test_get_settings():
 		assert config.get(setting) == config.settings[setting]
 
 
+# test converting the settings to a string
+def test_settings_to_string():
+	config = settings.Config()
+	assert type(config.to_string()) == str
+
+
 # test saving settings (integer)
-def test_save_settings_integer(monkeypatch):
+@mock.patch("CAT.settings.transmission.update_device_settings")
+def test_save_settings_integer(transmission_mock, monkeypatch):
 	# initialize config
 	config = settings.Config()
 
@@ -170,9 +180,13 @@ def test_save_settings_integer(monkeypatch):
 	config2 = settings.Config()
 	assert config2.get(new_setting) == new_value
 
+	# test that the server was notified
+	transmission_mock.assert_called_once_with(config)
+
 
 # test saving settings (float)
-def test_save_settings_float(monkeypatch):
+@mock.patch("CAT.settings.transmission.update_device_settings")
+def test_save_settings_float(transmission_mock, monkeypatch):
 	# initialize config
 	config = settings.Config()
 
@@ -214,9 +228,13 @@ def test_save_settings_float(monkeypatch):
 	config2 = settings.Config()
 	assert config2.get(new_setting) == new_value
 
+	# test that the server was notified
+	transmission_mock.assert_called_once_with(config)
+
 
 # test saving settings (boolean)
-def test_save_settings_boolean(monkeypatch):
+@mock.patch("CAT.settings.transmission.update_device_settings")
+def test_save_settings_boolean(transmission_mock, monkeypatch):
 	# initialize config
 	config = settings.Config()
 
@@ -258,9 +276,13 @@ def test_save_settings_boolean(monkeypatch):
 	config2 = settings.Config()
 	assert config2.get("speaker_diarization") == True
 
+	# test that the server was notified
+	transmission_mock.assert_called_once_with(config)
+
 
 # test saving settings (datetime)
-def test_save_settings_day(monkeypatch):
+@mock.patch("CAT.settings.transmission.update_device_settings")
+def test_save_settings_day(transmission_mock, monkeypatch):
 	# initialize config
 	config = settings.Config()
 
@@ -302,9 +324,61 @@ def test_save_settings_day(monkeypatch):
 	config2 = settings.Config()
 	assert config2.get(new_setting) == new_value
 
+	# test that the server was notified
+	transmission_mock.assert_called_once_with(config)
+
+
+# test saving settings (string)
+@mock.patch("CAT.settings.transmission.update_device_settings")
+def test_save_settings_string(transmission_mock, monkeypatch):
+	# initialize config
+	config = settings.Config()
+
+	# mock filename so it saves in a different file to examine
+	monkeypatch.setattr(settings, "FILENAME", "test_temp.ini")
+
+	# parameters
+	new_setting = "server"
+	new_value = "https://en.wikipedia.org"
+	semaphore = multiprocessing.Semaphore(config.get("num_cores"))
+	event = multiprocessing.Event()
+	event.set()
+	lock = multiprocessing.Lock()
+
+	# call function
+	settings.update_settings(config, new_setting, new_value, semaphore, event, lock)
+
+	# test that the event is reset
+	assert event.is_set()
+
+	# test that all semaphores were released
+	for _ in range(config.get("num_cores")):
+		semaphore.acquire()
+
+	# test that the lock was released
+	lock.acquire()
+
+	# test that setting is updated in program
+	assert config.get(new_setting) == new_value
+
+	# test file created
+	assert "test_temp.ini" in os.listdir(get_package_dir())
+
+	# test that the setting appears in the file
+	file = open(os.path.join(get_package_dir(), "test_temp.ini"), 'r')
+	assert "{} = {}".format(new_setting, new_value) in file.read()
+
+	# check that new setting reads properly
+	config2 = settings.Config()
+	assert config2.get(new_setting) == new_value
+
+	# test that the server was notified
+	transmission_mock.assert_called_once_with(config)
+
 
 # test not setting calculated fields
-def test_save_settings_calculated(monkeypatch):
+@mock.patch("CAT.settings.transmission.update_device_settings")
+def test_save_settings_calculated(transmission_mock, monkeypatch):
 	# initialize config
 	config = settings.Config()
 
@@ -329,9 +403,13 @@ def test_save_settings_calculated(monkeypatch):
 	# test file not created
 	assert not "test_temp.ini" in os.listdir(get_package_dir())
 
+	# test that the server was not notified
+	transmission_mock.assert_not_called()
+
 
 # test that settings are not set if the semaphore is not available
-def test_save_settings_no_semaphore_boolean(monkeypatch):
+@mock.patch("CAT.settings.transmission.update_device_settings")
+def test_save_settings_no_semaphore_boolean(transmission_mock, monkeypatch):
 	# initialize config
 	config = settings.Config()
 
@@ -362,6 +440,9 @@ def test_save_settings_no_semaphore_boolean(monkeypatch):
 	# test file is not created
 	assert not "test_temp.ini" in os.listdir(get_package_dir())
 
+	# test that the server was not notified
+	transmission_mock.assert_not_called()
+
 
 # test managing processes and pause recording while updating settings
 @pytest.mark.parametrize('mock_stream', [os.path.join(get_test_recording_dir(), 'settings_twice.wav')], indirect=['mock_stream'])
@@ -377,10 +458,15 @@ def test_save_settings_manage_processes(mock_stream, monkeypatch):
 		analysis_calls.put(config.get("device_id"))
 	monkeypatch.setattr(scheduling, "analyze_audio_file", analyze_mock)
 
-	transmission_calls = multiprocessing.Queue()
-	def transmission_mock(config, threads_ready_to_update, settings_update_event):
-		transmission_calls.put(config.get("device_id"))
-	monkeypatch.setattr(scheduling.transmission, "check_for_updates", transmission_mock)
+	transmission_check_calls = multiprocessing.Queue()
+	def transmission_check_mock(config, threads_ready_to_update, settings_update_event):
+		transmission_check_calls.put(config.get("device_id"))
+	monkeypatch.setattr(scheduling.transmission, "check_for_updates", transmission_check_mock)
+
+	transmission_update_calls = multiprocessing.Queue()
+	def transmission_update_mock(config):
+		transmission_update_calls.put(config.get("device_id"))
+	monkeypatch.setattr(scheduling.transmission, "update_device_settings", transmission_update_mock)
 
 	queue_calls = multiprocessing.Queue()
 	original_function = record.queue_audio_buffer
@@ -400,20 +486,20 @@ def test_save_settings_manage_processes(mock_stream, monkeypatch):
 		speaker_dictionary = process_manager.dict()
 		settings_update_event = multiprocessing.Event()
 		settings_update_event.set()
-		threads_ready_to_update = multiprocessing.Semaphore(config.get("num_cores") - 3)
+		threads_ready_to_update = multiprocessing.Semaphore(config.get("num_cores") - 1)
 		settings_update_lock = multiprocessing.Lock()
 		speaker_dictionary_lock = multiprocessing.Lock()
 		file_queue = multiprocessing.Queue() # thread-safe FIFO queue
-
-		# start updating a setting
-		process = multiprocessing.Process(target=settings.update_settings, args=(config, "device_id", 9876, threads_ready_to_update, settings_update_event, settings_update_lock))
-		process.start()
 
 		# start the process (just one of each)
 		recording_process = multiprocessing.Process(target=record.record, args=(file_queue, config, threads_ready_to_update, settings_update_event))
 		recording_process.start()
 		analysis_process = multiprocessing.Process(target=scheduling.analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock, config, threads_ready_to_update, settings_update_event, settings_update_lock))
 		analysis_process.start()
+
+		# start updating a setting
+		process = multiprocessing.Process(target=settings.update_settings, args=(config, "device_id", 9876, threads_ready_to_update, settings_update_event, settings_update_lock))
+		process.start()
 
 		# give the Processes time to run
 		time.sleep(2)
@@ -433,12 +519,17 @@ def test_save_settings_manage_processes(mock_stream, monkeypatch):
 		assert analysis_calls.qsize() == 2
 		assert analysis_calls.get() == 0
 		assert analysis_calls.get() == 9876
-		assert transmission_calls.qsize() == 2
-		assert transmission_calls.get() == 0
-		assert transmission_calls.get() == 9876
+
+		assert transmission_check_calls.qsize() == 2
+		assert transmission_check_calls.get() == 0
+		assert transmission_check_calls.get() == 9876
+
 		assert queue_calls.qsize() == 2
 		assert queue_calls.get() == 0
 		assert queue_calls.get() == 9876
+
+		assert transmission_update_calls.qsize() == 1
+		assert transmission_update_calls.get() == 9876
 		
 
 		# test that the setting appears in the file

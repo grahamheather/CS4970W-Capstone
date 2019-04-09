@@ -7,11 +7,7 @@ from multiprocessing.managers import BaseManager
 
 import os
 
-from CAT import record
-from CAT import speaker_id
-from CAT import feature_extraction
-from CAT import transmission
-from CAT import settings
+from CAT import record, speaker_id, feature_extraction, transmission, settings
 
 
 def analyze_audio_file(filename, speaker_dictionary, speaker_dictionary_lock, config):
@@ -66,6 +62,9 @@ def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock,
 
 	'''
 
+	# acquire the semaphore indicating thread is starting
+	threads_ready_to_update.acquire()
+
 	# analysis processes process files indefinitely
 	while True:
 
@@ -96,13 +95,21 @@ def start_processes():
 	config_manager.start()
 	config = config_manager.Config()
 
-	process_manager = Manager()
-	speaker_dictionary = process_manager.dict()
+	# settings synchronization object
 	settings_update_event = Event()
 	settings_update_event.set()
-	threads_ready_to_update = Semaphore(0)
+	threads_ready_to_update = Semaphore(config.get("num_cores"))
 	settings_update_lock = Lock()
+
+	# first make sure the device is registered on the server
+	transmission.register_device(config, threads_ready_to_update, settings_update_event, settings_update_lock)
+
+	# speaker synchronization objects
+	process_manager = Manager()
+	speaker_dictionary = process_manager.dict(transmission.get_speakers(config))
 	speaker_dictionary_lock = Lock()
+
+	# file synchronization objects
 	file_queue = Queue() # thread-safe FIFO queue
 
 	# ideally of the cores should run the record.recording process
@@ -115,8 +122,11 @@ def start_processes():
 	for process in analysis_processes:
 		process.start()
 
-	# block until the record.recording process exits (never, unless error)
+	# block until the all processes exit (never, unless error)
 	recording_process.join()
+	for process in analysis_processes:
+		process.join()
+	
 
 
 if __name__ == '__main__':

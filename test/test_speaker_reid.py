@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import Mock
+import unittest.mock as mock
 
 # supporting libraries
 from os import path
@@ -60,20 +60,26 @@ def test_speaker_distance_singlar():
 
 
 # test that a new speaker can be added with no previous speakers
-def test_identify_speaker_empty(config):
+@mock.patch("CAT.speaker_reid.transmission.register_speaker")
+def test_identify_speaker_empty(new_speaker_mock, config):
+	# initialize mock
+	new_speaker_mock.return_value = "test_speaker"
+
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {}
 	lock = multiprocessing.Lock()
 	result = speaker_reid.identify_speaker(mean, covariance, dictionary, lock, config)
+	assert result == "test_speaker"
 	assert len(dictionary) == 1
 	assert result in dictionary
 	assert dictionary[result][:3] == (mean, covariance, 1)
 	assert dictionary[result][3] - datetime.datetime.now() < datetime.timedelta(hours=1)
 
 
-# test that a speaker can be compared against previous speakers
-def test_identify_speaker_previous(config):
+# test that a speaker can be compared against previous speakers\
+@mock.patch("CAT.speaker_reid.transmission.update_speaker")
+def test_identify_speaker_previous(update_speaker_mock, config):
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {
@@ -99,11 +105,17 @@ def test_identify_speaker_previous(config):
 	assert (dictionary[result][1] == numpy.array([[1, 0], [0, 1]])).all()
 	assert dictionary[result][2] == 4
 	assert dictionary[result][3] - datetime.datetime.now() < datetime.timedelta(hours=1)
+	assert update_speaker_mock.call_args[0][0] == config
+	assert update_speaker_mock.call_args[0][1] == 'abc'
+	assert (update_speaker_mock.call_args[0][2] == numpy.array([[1.375], [0]])).all()
+	assert (update_speaker_mock.call_args[0][3] == numpy.array([[1, 0], [0, 1]])).all()
+	assert update_speaker_mock.call_args[0][4] == 4
 
 
 # test that a speaker can be compared against previous speakers
 # including ones with singular matrices
-def test_identify_speaker_invalid_previous(config):
+@mock.patch("CAT.speaker_reid.transmission.update_speaker")
+def test_identify_speaker_invalid_previous(update_speaker_mock, config):
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {
@@ -129,11 +141,21 @@ def test_identify_speaker_invalid_previous(config):
 	assert (dictionary[result][1] == numpy.array([[1, 0], [0, 1]])).all()
 	assert dictionary[result][2] == 4
 	assert dictionary[result][3] - datetime.datetime.now() < datetime.timedelta(hours=1)
+	update_speaker_mock.assert_called_once()
+	assert update_speaker_mock.call_args[0][0] == config
+	assert update_speaker_mock.call_args[0][1] == 'abc'
+	assert (update_speaker_mock.call_args[0][2] == numpy.array([[1.375], [0]])).all()
+	assert (update_speaker_mock.call_args[0][3] == numpy.array([[1, 0], [0, 1]])).all()
+	assert update_speaker_mock.call_args[0][4] == 4
 
 
-# te that a new speaker can be identified from previous speakers
+# test that a new speaker can be identified from previous speakers
 # including ones with singular matrices
-def test_identify_speaker_new(config):
+@mock.patch("CAT.speaker_reid.transmission.register_speaker")
+def test_identify_speaker_new(new_speaker_mock, config):
+	# initialize mock
+	new_speaker_mock.return_value = 'test_speaker'
+
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {
@@ -153,7 +175,7 @@ def test_identify_speaker_new(config):
 	lock = multiprocessing.Lock()
 	result = speaker_reid.identify_speaker(mean, covariance, dictionary, lock, config)
 	assert len(dictionary) == 3
-	assert (not result == 'abc') and (not result == 'xyz')
+	assert result == 'test_speaker'
 	assert len(dictionary[result]) == 4
 	assert (dictionary[result][0] == numpy.array([[1], [0]])).all()
 	assert (dictionary[result][1] == numpy.array([[1, 0], [0, 1]])).all()
@@ -162,8 +184,12 @@ def test_identify_speaker_new(config):
 
 
 # test that a new speaker can be identified from previous speakers
-# including ones with singular matrices	
-def test_identify_speaker_invalid_new(config):
+# including ones with singular matrices
+@mock.patch("CAT.speaker_reid.transmission.register_speaker")
+def test_identify_speaker_invalid_new(new_speaker_mock, config):
+	# initialize mock
+	new_speaker_mock.return_value = 'test_speaker'
+
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {
@@ -192,7 +218,12 @@ def test_identify_speaker_invalid_new(config):
 
 
 # test that speakers are eventually forgotten
-def test_identify_speakers_forget_speakers(config):
+@mock.patch("CAT.speaker_reid.transmission.delete_speaker")
+@mock.patch("CAT.speaker_reid.transmission.register_speaker")
+def test_identify_speakers_forget_speakers(new_speaker_mock, delete_speaker_mock, config):
+	# initialize mock
+	new_speaker_mock.return_value = "test_speaker"
+
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {
@@ -227,10 +258,18 @@ def test_identify_speakers_forget_speakers(config):
 	assert 'xyz' in dictionary
 	assert 'a1b2c3' not in dictionary
 	assert 'x1y2z3' not in dictionary
+	assert delete_speaker_mock.call_count == 2
+	delete_speaker_mock.assert_any_call(config, 'a1b2c3')
+	delete_speaker_mock.assert_any_call(config, 'x1y2z3')
 
 
 # test that speakers are eliminated if there are too many
-def test_identify_speakers_too_many_speakers(config):
+@mock.patch("CAT.speaker_reid.transmission.delete_speaker")
+@mock.patch("CAT.speaker_reid.transmission.register_speaker")
+def test_identify_speakers_too_many_speakers(new_speaker_mock, delete_speaker_mock, config):
+	# initialize mock
+	new_speaker_mock.return_value = "test_speaker"
+
 	# lower maximum number of speakers
 	def mock_max_speakers(key):
 		if key == "max_number_of_speakers":
@@ -238,7 +277,7 @@ def test_identify_speakers_too_many_speakers(config):
 		else:
 			return config.get(key)
 
-	config_mock = Mock()
+	config_mock = mock.Mock()
 	config_mock.get = mock_max_speakers
 
 	mean = numpy.array([[1], [0]])
@@ -275,3 +314,7 @@ def test_identify_speakers_too_many_speakers(config):
 	assert 'xyz' not in dictionary
 	assert 'a1b2c3' in dictionary
 	assert 'x1y2z3' in dictionary
+	assert delete_speaker_mock.call_count == 3
+	delete_speaker_mock.assert_any_call(config_mock, 'abc')
+	delete_speaker_mock.assert_any_call(config_mock, 'xyz')
+	delete_speaker_mock.assert_any_call(config_mock, 'test_speaker')

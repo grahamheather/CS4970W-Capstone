@@ -4,6 +4,8 @@ import configparser
 from multiprocessing import Lock
 from os import path
 
+from CAT import transmission
+
 FILENAME = "config.ini"
 
 
@@ -30,6 +32,8 @@ class Config():
 			self.settings[key] = self.config["Boolean Values"].getboolean(key)
 		for key in self.config["Day Values"]:
 			self.settings[key] = datetime.timedelta(days=int(self.config["Day Values"][key]))
+		for key in self.config["String Values"]:
+			self.settings[key] = self.config["String Values"][key]
 
 		# calculated values
 		self.calculated_fields = set(["vad_frame_size", "vad_frame_bytes", "format", "periodic_sample_frames", "min_sample_frames", "max_sample_frames", "max_silence_frames"])
@@ -103,6 +107,15 @@ class Config():
 			self.config.write(self.config_file)
 
 
+	def to_string(self):
+		''' Return a string version of the settings for transmission
+			Returns:
+				str
+		'''
+
+		return str(self.settings)
+
+
 
 def update_settings(config, name, value, threads_ready_to_update, settings_update_event, settings_update_lock):
 	''' Coordinate multiple processes while updating settings
@@ -135,6 +148,9 @@ def update_settings(config, name, value, threads_ready_to_update, settings_updat
 
 	# update setting
 	config.set(name, value)
+
+	# notify server of update
+	transmission.update_device_settings(config)
 
 	# release the other processes to continue
 	for _ in range(config.get("num_cores")):
