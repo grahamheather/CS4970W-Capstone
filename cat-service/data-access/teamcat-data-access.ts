@@ -337,7 +337,7 @@ export class TeamCatDataAccess {
         ]).pipe(
             map(res => {
                 if(!res.affectedRows) {
-                    const error = new Error(`No device found with id: ${speaker.speakerId}`);
+                    const error = new Error(`No speaker found with id: ${speaker.speakerId}`);
                     error.name = "NotFoundError";
                     throw error;
                 }
