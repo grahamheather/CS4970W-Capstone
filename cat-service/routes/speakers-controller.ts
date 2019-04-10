@@ -105,11 +105,11 @@ export class SpeakersController extends BaseController {
     }
 
     private createSpeaker(req: Request, res: Response, next: NextFunction): void {
-        if(!req.body.speakerId || !req.body.data) {
+        if(!req.body.deviceId || !req.body.data) {
             next();
             return;
         }
-        if(!this.validateUuid(req.params.speakerId)) {
+        if(!this.validateUuid(req.body.deviceId)) {
             next(this.badRequest({displayMessage: 'deviceId must be a valid UUID'}));
             return;
         }
@@ -123,7 +123,7 @@ export class SpeakersController extends BaseController {
         }
 
         const speaker: Speaker = {
-            speakerId: req.body.speakerId,
+            deviceId: req.body.deviceId,
             data: data
         };
 

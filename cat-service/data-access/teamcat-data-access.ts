@@ -318,7 +318,7 @@ export class TeamCatDataAccess {
     }
 
     insertSpeaker(speaker: Speaker): Observable<Speaker> {
-        return this.callStoredProc('p_insert_recording(?,?)', [
+        return this.callStoredProc('p_insert_speaker(?,?)', [
             speaker.deviceId, 
             speaker.data || null
         ]).pipe(
