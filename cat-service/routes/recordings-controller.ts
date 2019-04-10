@@ -89,11 +89,11 @@ export class RecordingsController extends BaseController {
             next();
             return;
         }
-        if(!this.validateUuid(req.params.deviceId)) {
+        if(!this.validateUuid(req.body.deviceId)) {
             next(this.badRequest({displayMessage: 'deviceId must be a valid UUID'}));
             return;
         }
-        if(!this.validateUuid(req.params.settingsId)) {
+        if(!this.validateUuid(req.body.settingsId)) {
             next(this.badRequest({displayMessage: 'settingsId must be a valid UUID'}));
             return;
         }
