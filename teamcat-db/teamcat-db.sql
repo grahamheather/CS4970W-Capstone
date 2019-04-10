@@ -152,8 +152,8 @@ CREATE PROCEDURE p_delete_device(device_id VarChar(36))
   SQL SECURITY INVOKER
 begin
 
-DELETE FROM devices
-WHERE devices.device_id = f_generate_binary_uuid(device_id);
+DELETE d FROM devices d
+WHERE d.device_id = f_generate_binary_uuid(device_id);
 
 end
 /
@@ -162,8 +162,8 @@ CREATE PROCEDURE p_delete_recording(recording_id NVarChar(36))
   SQL SECURITY INVOKER
 begin
 
-DELETE FROM recordings
-WHERE recording_id = f_generate_binary_uuid(recording_id);
+DELETE r FROM recordings r
+WHERE r.recording_id = f_generate_binary_uuid(recording_id);
 
 end
 /
@@ -172,8 +172,8 @@ CREATE PROCEDURE p_delete_speaker(speaker_id NVarChar(36))
   SQL SECURITY INVOKER
 begin
 
-DELETE FROM speakers
-WHERE speaker_id = f_generate_binary_uuid(speaker_id);
+DELETE s FROM speakers s
+WHERE s.speaker_id = f_generate_binary_uuid(speaker_id);
 
 end
 /
@@ -581,9 +581,9 @@ CREATE PROCEDURE p_update_speakers(speaker_id NVarChar(36), json_data NVarChar(6
   SQL SECURITY INVOKER
 begin
 
-UPDATE speakers
+UPDATE speakers s
 SET json_data = COALESCE(json_data, '{}')
-WHERE speaker_id = f_generate_binary_uuid(speaker_id);
+WHERE s.speaker_id = f_generate_binary_uuid(speaker_id);
 
 end
 /
