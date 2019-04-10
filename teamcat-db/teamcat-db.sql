@@ -193,7 +193,8 @@ SELECT d.device_id_text AS device_id,
        s.json_settings 
 FROM devices d
 LEFT JOIN device_settings s
-ON d.settings_id = s.settings_id;
+ON d.settings_id = s.settings_id
+ORDER BY d.created_date DESC;
 
 end
 /

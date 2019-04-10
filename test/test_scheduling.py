@@ -1,5 +1,7 @@
 import pytest
 import unittest.mock as mock
+
+# supporting libraries
 import multiprocessing
 import time
 import os
@@ -16,10 +18,17 @@ def run_forever(arg):
 		continue
 
 
+# FIXTURES
+
+@pytest.fixture()
+def config():
+	return settings.Config()
+
+
 # TESTS
 
 # Test starting the recording and processing threads
-def test_start_processes(monkeypatch):
+def test_start_processes(monkeypatch, config):
 	# replace the functioning of each process with incrementing a counter
 	# to track how many of each kind of process are created
 	
@@ -27,7 +36,11 @@ def test_start_processes(monkeypatch):
 	global recording_process_counter
 	recording_process_counter = multiprocessing.Value('i', 0)
 
-	def increment_recording_process_counter(q):
+	def increment_recording_process_counter(q, c, s, e):
+		assert type(q) == multiprocessing.queues.Queue
+		assert str(type(c)) == "<class 'multiprocessing.managers.AutoProxy[Config]'>" # type isn't registered yet
+		assert type(s) == multiprocessing.synchronize.Semaphore
+		assert type(e) == multiprocessing.synchronize.Event
 		global recording_process_counter
 		with recording_process_counter.get_lock():
 			recording_process_counter.value += 1
@@ -38,10 +51,14 @@ def test_start_processes(monkeypatch):
 	global analysis_process_counter
 	analysis_process_counter = multiprocessing.Value('i', 0)
 
-	def increment_analysis_process_counter(a, b, c):
-		assert type(a) == multiprocessing.queues.Queue
-		assert type(b) == multiprocessing.managers.DictProxy
-		assert type(c) == multiprocessing.synchronize.Lock
+	def increment_analysis_process_counter(q, d, l, c, s, e, l2):
+		assert type(q) == multiprocessing.queues.Queue
+		assert type(d) == multiprocessing.managers.DictProxy
+		assert type(l) == multiprocessing.synchronize.Lock
+		assert str(type(c)) == "<class 'multiprocessing.managers.AutoProxy[Config]'>" # type isn't registered yet
+		assert type(s) == multiprocessing.synchronize.Semaphore
+		assert type(e) == multiprocessing.synchronize.Event
+		assert type(l2) == multiprocessing.synchronize.Lock
 		global analysis_process_counter
 		with analysis_process_counter.get_lock():
 			analysis_process_counter.value += 1
@@ -56,18 +73,27 @@ def test_start_processes(monkeypatch):
 	
 	# check that the proper number of processes have been created
 	assert recording_process_counter.value == 1
-	assert analysis_process_counter.value == settings.NUM_CORES - 1
+	assert analysis_process_counter.value == config.get("num_cores") - 1
 
 
 # Test analyzing audio files in processing queue
-def test_analyze_audio_files(monkeypatch):
-	processed_files = multiprocessing.Queue()
+def test_analyze_audio_files(monkeypatch, config):
+	# initialize Process-shared objects
+	process_manager = multiprocessing.Manager()
+	speaker_dictionary = process_manager.dict()
+	speaker_dictionary_lock = multiprocessing.Lock()
+	semaphore = multiprocessing.Semaphore(1)
+	event = multiprocessing.Event()
+	event.set()
+	lock = multiprocessing.Lock()
 
 	# replace the audio analysis function with placing the filename that would have been processed into a queue
 	# also check that unused arguments are appropriate
-	def analyze_audio_file_mock(filename, speaker_dictionary, speaker_dictionary_lock):
+	processed_files = multiprocessing.Queue()
+	def analyze_audio_file_mock(filename, speaker_dictionary, speaker_dictionary_lock, config):
 		assert type(speaker_dictionary) == multiprocessing.managers.DictProxy
 		assert type(speaker_dictionary_lock) == multiprocessing.synchronize.Lock
+		assert type(config) == settings.Config
 		processed_files.put(filename)
 	monkeypatch.setattr(scheduling, "analyze_audio_file", analyze_audio_file_mock)
 
@@ -85,13 +111,9 @@ def test_analyze_audio_files(monkeypatch):
 	# check that all filenames were successfully placed in the queue
 	assert file_queue.qsize() == len(filenames)
 
-	# other arguments for the processing threads
-	process_manager = multiprocessing.Manager()
-	speaker_dictionary = process_manager.dict()
-	speaker_dictionary_lock = multiprocessing.Lock()
-
 	# start the audio analysis Process
-	process = multiprocessing.Process(target=scheduling.analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock))
+	process = multiprocessing.Process(target=scheduling.analyze_audio_files, args=(
+		file_queue, speaker_dictionary, speaker_dictionary_lock, config, semaphore, event, lock))
 	process.start()
 
 	# give the Process sufficient time to iterate over all files
@@ -114,21 +136,26 @@ def test_analyze_audio_files(monkeypatch):
 
 
 # Test analyzing a new audio file added to the processing queue
-def test_analyze_audio_files_late_add(monkeypatch):
+def test_analyze_audio_files_late_add(monkeypatch, config):
+	# initialized Process-shared objects
+	process_manager = multiprocessing.Manager()
+	speaker_dictionary = process_manager.dict()
+	speaker_dictionary_lock = multiprocessing.Lock()
+	semaphore = multiprocessing.Semaphore(1)
+	event = multiprocessing.Event()
+	event.set()
+	lock = multiprocessing.Lock()
+
 	# replace the audio analysis function with placing the filename that would have been processed into a queue
 	processed_files = multiprocessing.Queue()
-	monkeypatch.setattr(scheduling, "analyze_audio_file", lambda filename, _, __: processed_files.put(filename))
+	monkeypatch.setattr(scheduling, "analyze_audio_file", lambda filename, _, __, ___: processed_files.put(filename))
 
 	# initialize an empty queue of files
 	file_queue = multiprocessing.Queue()
 
-	# other arguments for the processing threads
-	process_manager = multiprocessing.Manager()
-	speaker_dictionary = process_manager.dict()
-	speaker_dictionary_lock = multiprocessing.Lock()
-
 	# start the audio analysis Process
-	process = multiprocessing.Process(target=scheduling.analyze_audio_files, args=(file_queue, speaker_dictionary, speaker_dictionary_lock))
+	process = multiprocessing.Process(target=scheduling.analyze_audio_files, args=(
+		file_queue, speaker_dictionary, speaker_dictionary_lock, config, semaphore, event, lock))
 	process.start()
 
 	# wait a small amount of time
@@ -171,7 +198,8 @@ def test_analyze_audio_files_late_add(monkeypatch):
 @mock.patch('CAT.scheduling.speaker_id.identify_speakers')
 def test_analyze_audio_file_speaker_diarization(identify_speakers_mock, extract_features_mock, transmit_mock, remove_mock):
 	# enable speaker diarization
-	scheduling.SPEAKER_DIARIZATION = True
+	config_mock = mock.Mock()
+	config_mock.get.return_value = True
 
 	# initialize mock return values
 	identify_speakers_mock.return_value=[('file1.wav', 'speaker1'), ('file2.wav', 'speaker2')]
@@ -180,10 +208,10 @@ def test_analyze_audio_file_speaker_diarization(identify_speakers_mock, extract_
 	# call function
 	dictionary = {}
 	lock = multiprocessing.Lock()
-	scheduling.analyze_audio_file('test_file.wav', dictionary, lock)
+	scheduling.analyze_audio_file('test_file.wav', dictionary, lock, config_mock)
 	
 	# test identify_speakers called properly
-	identify_speakers_mock.assert_called_once_with('test_file.wav', dictionary, lock)
+	identify_speakers_mock.assert_called_once_with('test_file.wav', dictionary, lock, config_mock)
 	
 	# test extract_features called properly
 	assert extract_features_mock.call_count == 2
@@ -204,14 +232,16 @@ def test_analyze_audio_file_speaker_diarization(identify_speakers_mock, extract_
 	])
 
 
-# Test that audio file analysis extracts features and transmits (without speaker diarization)
+# test that audio file analysis extracts features and transmits (without speaker diarization)
 @mock.patch('CAT.scheduling.os.remove')
 @mock.patch('CAT.scheduling.transmission.transmit')
 @mock.patch('CAT.scheduling.feature_extraction.extract_features')
 @mock.patch('CAT.scheduling.speaker_id.identify_speakers')
-def test_analyze_audio_file_no_speaker_diarization(identify_speakers_mock, extract_features_mock, transmit_mock, remove_mock):
+def test_analyze_audio_file_no_speaker_diarization(identify_speakers_mock, extract_features_mock, transmit_mock, remove_mock, config):
 	# disable speaker diarization
-	scheduling.SPEAKER_DIARIZATION = False
+	# enable speaker diarization
+	config_mock = mock.Mock()
+	config_mock.get.return_value = False
 
 	# initialize mock return values
 	identify_speakers_mock.return_value=[('file1.wav', 'speaker1'), ('file2.wav', 'speaker2')]
@@ -220,7 +250,7 @@ def test_analyze_audio_file_no_speaker_diarization(identify_speakers_mock, extra
 	# call function
 	dictionary = {}
 	lock = multiprocessing.Lock()
-	scheduling.analyze_audio_file('test_file.wav', dictionary, lock)
+	scheduling.analyze_audio_file('test_file.wav', dictionary, lock, config_mock)
 	
 	# test identify_speakers called properly
 	identify_speakers_mock.assert_not_called()
