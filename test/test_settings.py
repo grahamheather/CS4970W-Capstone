@@ -254,7 +254,7 @@ def test_save_settings_manage_processes(mock_stream, monkeypatch):
 	monkeypatch.setattr(scheduling, "analyze_audio_file", analyze_mock)
 
 	transmission_check_calls = multiprocessing.Queue()
-	def transmission_check_mock(config, threads_ready_to_update, settings_update_event):
+	def transmission_check_mock(config, threads_ready_to_update, settings_update_event, settings_update_lock):
 		transmission_check_calls.put(config.get("max_number_of_speakers"))
 	monkeypatch.setattr(scheduling.transmission, "check_for_updates", transmission_check_mock)
 
