@@ -7,4 +7,4 @@ def extract_features(filename):
 			INSERT HERE
 	'''
 
-	return []
+	return "VERY IMPORTANT FEATURES"

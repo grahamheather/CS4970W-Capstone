@@ -34,7 +34,7 @@ def analyze_audio_file(filename, speaker_dictionary, speaker_dictionary_lock, co
 	# extract features and transmit
 	for filename, speaker in files:
 		features = feature_extraction.extract_features(filename)
-		transmission.transmit(features, speaker)
+		transmission.transmit(features, speaker, config)
 		
 		# if speaker diarization was used, new subfiles have been created and need to be removed
 		if config.get("speaker_diarization"):
@@ -77,7 +77,7 @@ def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock,
 		# delete the file
 		os.remove(filename)
 
-		transmission.check_for_updates(config, threads_ready_to_update, settings_update_event)
+		transmission.check_for_updates(config, threads_ready_to_update, settings_update_event, settings_update_lock)
 
 		# no files being processed
 		# so this is a good time for a settings update
@@ -102,7 +102,7 @@ def start_processes():
 	settings_update_lock = Lock()
 
 	# first make sure the device is registered on the server
-	transmission.register_device(config, threads_ready_to_update, settings_update_event, settings_update_lock)
+	transmission.register_device(config)
 
 	# speaker synchronization objects
 	process_manager = Manager()
