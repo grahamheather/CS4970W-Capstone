@@ -28,7 +28,12 @@ def config():
 # TESTS
 
 # Test starting the recording and processing threads
-def test_start_processes(monkeypatch, config):
+@mock.patch("CAT.scheduling.transmission.register_device")
+@mock.patch("CAT.scheduling.transmission.get_speakers")
+def test_start_processes(get_speakers_mock, register_device_mock, monkeypatch, config):
+	# initialize mock
+	get_speakers_mock.return_value = {'test_speaker': []}
+
 	# replace the functioning of each process with incrementing a counter
 	# to track how many of each kind of process are created
 	
@@ -54,6 +59,7 @@ def test_start_processes(monkeypatch, config):
 	def increment_analysis_process_counter(q, d, l, c, s, e, l2):
 		assert type(q) == multiprocessing.queues.Queue
 		assert type(d) == multiprocessing.managers.DictProxy
+		assert 'test_speaker' in d
 		assert type(l) == multiprocessing.synchronize.Lock
 		assert str(type(c)) == "<class 'multiprocessing.managers.AutoProxy[Config]'>" # type isn't registered yet
 		assert type(s) == multiprocessing.synchronize.Semaphore
@@ -75,9 +81,16 @@ def test_start_processes(monkeypatch, config):
 	assert recording_process_counter.value == 1
 	assert analysis_process_counter.value == config.get("num_cores") - 1
 
+	# check that speakers were queried
+	get_speakers_mock.assert_called_once()
+
+	# check that the device was registered
+	register_device_mock.assert_called_once()
+
 
 # Test analyzing audio files in processing queue
-def test_analyze_audio_files(monkeypatch, config):
+@mock.patch("CAT.scheduling.transmission.check_for_updates")
+def test_analyze_audio_files(transmit_mock, monkeypatch, config):
 	# initialize Process-shared objects
 	process_manager = multiprocessing.Manager()
 	speaker_dictionary = process_manager.dict()
@@ -136,7 +149,8 @@ def test_analyze_audio_files(monkeypatch, config):
 
 
 # Test analyzing a new audio file added to the processing queue
-def test_analyze_audio_files_late_add(monkeypatch, config):
+@mock.patch("CAT.scheduling.transmission.check_for_updates")
+def test_analyze_audio_files_late_add(transmit_mock, monkeypatch, config):
 	# initialized Process-shared objects
 	process_manager = multiprocessing.Manager()
 	speaker_dictionary = process_manager.dict()
@@ -220,8 +234,8 @@ def test_analyze_audio_file_speaker_diarization(identify_speakers_mock, extract_
 	# test transmit called properly
 	assert transmit_mock.call_count == 2
 	transmit_mock.assert_has_calls([
-		mock.call([1, 2, 3, 4], 'speaker1'),
-		mock.call([5, 6, 7, 8], 'speaker2')
+		mock.call([1, 2, 3, 4], 'speaker1', config_mock),
+		mock.call([5, 6, 7, 8], 'speaker2', config_mock)
 	])
 
 	# test files removed properly
@@ -259,7 +273,7 @@ def test_analyze_audio_file_no_speaker_diarization(identify_speakers_mock, extra
 	extract_features_mock.assert_called_once_with('test_file.wav')
 
 	# test transmit called properly
-	transmit_mock.assert_called_once_with([1, 2, 3, 4], None)
+	transmit_mock.assert_called_once_with([1, 2, 3, 4], None, config_mock)
 
 	# test that no additional files were removed
 	remove_mock.assert_not_called()

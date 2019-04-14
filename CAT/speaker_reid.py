@@ -1,6 +1,7 @@
 import datetime
-import uuid
 from numpy.linalg import norm
+
+from CAT import transmission
 
 
 def speaker_distance(mean0, covariance0, mean1, covariance1):
@@ -27,7 +28,7 @@ def speaker_distance(mean0, covariance0, mean1, covariance1):
 	return norm(mean0 - mean1)
 
 
-def add_new_speaker(audio_mean, audio_covariance, speaker_dictionary):
+def add_new_speaker(audio_mean, audio_covariance, speaker_dictionary, config):
 	''' Utility function to add a new speaker to the dictionary
 
 		Parameters:
@@ -40,12 +41,14 @@ def add_new_speaker(audio_mean, audio_covariance, speaker_dictionary):
 				{
 					'speakerID': (mean, covariance, count, last seen)
 				}
+			config
+				CAT.settings.Config - all settings associated with the program
 		Returns:
 			new speaker ID generated
 	'''
 
 	# store a new speaker
-	speaker_id = str(uuid.uuid4()) # generates a random ID, highly unlikely to be duplicated
+	speaker_id = transmission.register_speaker(config, audio_mean, audio_covariance)
 	speaker_dictionary[speaker_id] = (audio_mean, audio_covariance, 1, datetime.datetime.now())
 
 	return speaker_id
@@ -77,7 +80,7 @@ def identify_speaker(audio_mean, audio_covariance, speaker_dictionary, speaker_d
 
 	# if there are no speakers yet, add a new one
 	if len(speaker_dictionary) == 0:
-		speaker_id = add_new_speaker(audio_mean, audio_covariance, speaker_dictionary)
+		speaker_id = add_new_speaker(audio_mean, audio_covariance, speaker_dictionary, config)
 
 	else:
 		# find the previously recorded speaker with the lowest distance
@@ -94,29 +97,33 @@ def identify_speaker(audio_mean, audio_covariance, speaker_dictionary, speaker_d
 				speaker_mean = temp_speaker_mean
 				speaker_covariance = temp_speaker_covariance
 				speaker_count = temp_speaker_count
-
+		print(speaker_id, distance, config.get("speaker_reid_distance_threshold"))
 		if distance == None: # distance is invalid on all pairs
 			# add a new speaker
-			speaker_id = add_new_speaker(audio_mean, audio_covariance, speaker_dictionary)
+			speaker_id = add_new_speaker(audio_mean, audio_covariance, speaker_dictionary, config)
 		elif distance <= config.get("speaker_reid_distance_threshold"):
 			# update speaker values
 			new_speaker_count = speaker_count + 1
 			new_mean = (speaker_mean * speaker_count + audio_mean) / new_speaker_count
 			new_covariance = (speaker_covariance * speaker_count + audio_covariance) / new_speaker_count
 			speaker_dictionary[speaker_id] = (new_mean, new_covariance, new_speaker_count, datetime.datetime.now())
+			transmission.update_speaker(config, speaker_id, new_mean, new_covariance, new_speaker_count)
 		else:
 			# or add a new speaker
-			speaker_id = add_new_speaker(audio_mean, audio_covariance, speaker_dictionary)
+			speaker_id = add_new_speaker(audio_mean, audio_covariance, speaker_dictionary, config)
 
 		# remove not recently seen speakers
-		for speaker in list(speaker_dictionary.keys()):
-			if datetime.datetime.now() - speaker_dictionary[speaker][3] > config.get("speaker_forget_interval"):
-				speaker_dictionary.pop(speaker, None)
+		for speaker_to_delete in list(speaker_dictionary.keys()):
+			if datetime.datetime.now() - speaker_dictionary[speaker_to_delete][3] > config.get("speaker_forget_interval"):
+				transmission.delete_speaker(config, speaker_to_delete)
+				speaker_dictionary.pop(speaker_to_delete, None)
 
 		# if there are too many speakers, remove rarely occuring ones
 		while len(speaker_dictionary) > config.get("max_number_of_speakers"):
+			speaker_to_delete = min(speaker_dictionary, key=lambda key: speaker_dictionary.get(key)[2])
+			transmission.delete_speaker(config, speaker_to_delete)
 			deleted = speaker_dictionary.pop(
-				min(speaker_dictionary, key=lambda key: speaker_dictionary.get(key)[2]),
+				speaker_to_delete,
 				None
 			)
 

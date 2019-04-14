@@ -3,6 +3,7 @@ import datetime
 import configparser
 from multiprocessing import Lock
 from os import path
+import json
 
 FILENAME = "config.ini"
 
@@ -30,9 +31,12 @@ class Config():
 			self.settings[key] = self.config["Boolean Values"].getboolean(key)
 		for key in self.config["Day Values"]:
 			self.settings[key] = datetime.timedelta(days=int(self.config["Day Values"][key]))
+		for key in self.config["String Values"]:
+			self.settings[key] = self.config["String Values"][key]
 
 		# calculated values
 		self.calculated_fields = set(["vad_frame_size", "vad_frame_bytes", "format", "periodic_sample_frames", "min_sample_frames", "max_sample_frames", "max_silence_frames"])
+		self.do_not_edit_fields = set(["milliseconds_per_second", "device_id", "settings_id"])		
 		# audio recording self.settings
 		self.settings["vad_frame_size"] = int(
 			self.settings["rate"] * self.settings["vad_frame_ms"] / self.settings["milliseconds_per_second"]
@@ -80,21 +84,23 @@ class Config():
 		if name in self.calculated_fields:
 			raise ValueError("Calculated fields cannot be manually set")
 
-
-		# update in active data structure
-		self.settings[name] = value
-
 		# update in config
 		found = False
 		for section in self.config:
 			for key in self.config[section]:
 				if key == name:
-					if type(value) == datetime.timedelta:
-						self.config.set(section, key, str(value.days))
+					# update internal structure
+					if section == "Day Values":
+						self.settings[name] = datetime.timedelta(days=value)
 					else:
-						self.config.set(section, key, str(value))
+						self.settings[name] = value
+					
+					# update write-able config
+					self.config.set(section, key, str(value))
+					
 					found = True
 					break
+			
 			if found == True:
 				break
 
@@ -103,14 +109,29 @@ class Config():
 			self.config.write(self.config_file)
 
 
+	def to_string(self):
+		''' Return a string version of the settings for transmission
+			Returns:
+				str
+		'''
 
-def update_settings(config, name, value, threads_ready_to_update, settings_update_event, settings_update_lock):
+		# construct a dictionary
+		settings_to_send = {}
+		for key in self.settings:
+			if not key in self.calculated_fields and not key in self.do_not_edit_fields:
+				settings_to_send[key] = self.settings[key] if not key in self.config["Day Values"] else self.settings[key].days
+
+		return json.dumps(settings_to_send)
+
+
+
+def update_settings(config, new_settings, new_setting_id, threads_ready_to_update, settings_update_event, settings_update_lock):
 	''' Coordinate multiple processes while updating settings
 
 		Parameters:
 			config - CAT.settings.Config, the config file to update the setting in
-			name - str, the name of the setting (all lowercase, case sensitive)
-			value - the new value of the setting
+			new_settings - dict, key-value pairs of new settings
+			new_setting_id - str, setting ID associated with these new settings
 			threads_ready_to_update
 				multiprocessing.Semaphore - indicates how many threads are currently ready for a settings update
 			setting_update
@@ -134,7 +155,14 @@ def update_settings(config, name, value, threads_ready_to_update, settings_updat
 		threads_ready_to_update.acquire()
 
 	# update setting
-	config.set(name, value)
+	for name in new_settings:
+		try:
+			config.set(name, new_settings[name])
+		except ValueError:
+			pass
+
+	# update settings ID
+	config.set("settings_id", new_setting_id)
 
 	# release the other processes to continue
 	for _ in range(config.get("num_cores")):
