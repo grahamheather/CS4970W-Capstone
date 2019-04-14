@@ -6,10 +6,16 @@
     $foreground: map-get($theme, foreground);
     $background: map-get($theme, background);
 
-    app-root {
+    .app-root {
         .nav-buttons {
             button {
                 background: mat-color($primary, darker);
+            }
+        }
+
+        .scrollable {
+            &::-webkit-scrollbar-thumb {
+                background: mat-color($accent);
             }
         }
     }

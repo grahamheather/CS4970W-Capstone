@@ -1,14 +1,15 @@
 <div class="app-root">
   <mat-toolbar color="primary">
-    <span>CAT</span>
+    <a mat-button class="home-link" routerLink=".">
+      <span>CAT</span>
+    </a>
     <span class="spacer"></span>
     <span class="nav-buttons">
-      <button mat-button>Data</button>
-      <button mat-button>Devices</button>
-      <button mat-button>Settings</button>
+      <button mat-button routerLink="/devices">Devices</button>
+      <button mat-button routerLink="/data">Data</button>
     </span>
   </mat-toolbar>
-  <div class="app-container">
+  <div class="app-container scrollable">
     <router-outlet></router-outlet>
   </div>
 </div>

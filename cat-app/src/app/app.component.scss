@@ -10,10 +10,25 @@ mat-toolbar {
     position: sticky;
     top: 0;
     z-index: 1000;
+
+    .home-link {
+        font-size: 1.25rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
 }
 
 .app-container {
     flex: 0 1 100vh;
+}
+
+.scrollable {
+    overflow-y: auto;
+
+    &::-webkit-scrollbar {
+        width: .75rem;
+    }
 }
 
 .spacer {

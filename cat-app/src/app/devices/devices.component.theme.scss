@@ -6,7 +6,13 @@
     $foreground: map-get($theme, foreground);
     $background: map-get($theme, background);
 
-    app-devices {
+    .devices-root {
+        .scrollable {
+            &::-webkit-scrollbar-thumb {
+                background: mat-color($accent);
+            }
+        }
+
         .add-device-button {
             background: mat-color($primary, darker);
         }

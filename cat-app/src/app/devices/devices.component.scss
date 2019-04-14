@@ -15,12 +15,24 @@
     display: flex;
     flex-direction: column;
 
+    .scrollable {
+        overflow-y: auto;
+
+        &::-webkit-scrollbar {
+            width: .5rem;
+        }
+        &::-webkit-scrollbar-thumb {
+            border-radius: 0 .25rem .25rem 0;
+        }
+    }
+
     .device-card {
         flex: 0 1 100%;
         width: 20rem;
         margin: 1.25rem 1.75rem;
         display: flex;
         flex-direction: column;
+        max-height: 20rem;
     
         mat-card-header {
             flex: 1 0 auto;
@@ -55,6 +67,49 @@
             &:last-child {
                 margin-bottom: -8px;
                 padding-bottom: 0;
+            }
+        }
+    }
+}
+
+.no-header-panel {
+    padding-top: 1rem;
+}
+
+.mat-expansion-panel-header-description {
+    justify-content: flex-end;
+    align-items: center;
+    margin-right: 0;
+}
+
+.line-item-list {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+
+    .line-item {
+        display: flex;
+        align-items: center;
+        padding-bottom: 1rem;
+
+        &:last-child {
+            padding-bottom: 0;
+        }
+    
+        .line-item-icon {
+            padding: .25rem;
+        }
+        .line-item-body {
+            padding-left: 1rem;
+            flex: 0 1 100%;
+            display: flex;
+            flex-direction: column;
+    
+            .line-item-header {
+                font-size: 1rem;
+            }
+            .line-item-content {
+                font-size: .875rem;
             }
         }
     }

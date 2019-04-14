@@ -23,6 +23,8 @@ import { FormsModule } from '@angular/forms';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatMomentDateModule, MAT_MOMENT_DATE_ADAPTER_OPTIONS } from '@angular/material-moment-adapter';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatExpansionModule } from '@angular/material/expansion';
 
 @NgModule({
   declarations: [
@@ -48,7 +50,9 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
     FormsModule,
     MatDatepickerModule,
     MatMomentDateModule,
-    MatProgressBarModule
+    MatProgressBarModule,
+    MatTooltipModule,
+    MatExpansionModule
   ],
   entryComponents: [
     AddDeviceSheetComponent
