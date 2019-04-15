@@ -21,8 +21,13 @@ export class DevicesService {
             if(device.createdDate) {
               device.createdDate = new Date(device.createdDate);
             }
-            if(device.settings && device.settings.createdDate) {
-              device.settings.createdDate = new Date(device.settings.createdDate);
+            if(device.settings) {
+              if(device.settings.createdDate) {
+                device.settings.createdDate = new Date(device.settings.createdDate);
+              }
+              if(device.settings.properties) {
+                device.settings.properties = JSON.parse(device.settings.properties);
+              }
             }
           })
           return devices;

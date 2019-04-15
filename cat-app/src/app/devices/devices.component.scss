@@ -63,11 +63,10 @@
         mat-card-actions {
             display: flex;
             align-items: center;
-    
-            &:last-child {
-                margin-bottom: -8px;
-                padding-bottom: 0;
-            }
+        }
+
+        form>mat-card-actions {
+            margin-bottom: -8px;
         }
     }
 }
@@ -76,16 +75,32 @@
     padding-top: 1rem;
 }
 
-.mat-expansion-panel-header-description {
+mat-panel-description {
     justify-content: flex-end;
     align-items: center;
     margin-right: 0;
+
+    mat-icon {
+        padding-left: 1rem;
+    }
 }
 
 .line-item-list {
     display: flex;
     flex-direction: column;
     justify-content: center;
+
+    &[dense] {
+        .line-item {
+            padding-bottom: 0;
+            
+            .line-item-body {
+                .line-item-header {
+                    font-size: .875rem;
+                }
+            }
+        }
+    }
 
     .line-item {
         display: flex;
@@ -113,6 +128,15 @@
             }
         }
     }
+}
+
+.no-arrows::-webkit-outer-spin-button,
+.no-arrows::-webkit-inner-spin-button {
+    display: none;
+}
+
+.form-label {
+    padding-left: 1rem;
 }
 
 .add-device-button {

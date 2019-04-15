@@ -47,13 +47,20 @@ export class DevicesComponent implements OnInit {
     card.loading = true;
 
     const settings: DeviceSettings = {
-      deviceId: form.value.deviceId
+      deviceId: form.value.deviceId,
+      properties: {}
     };
+    delete form.value.deviceId;
+    this.updateValues(form.value, settings.properties);
+
+    console.log(settings);
 
     this.devicesService.updateDeviceSettings(settings)
       .subscribe((res: DeviceSettings) => {
         card.loading = false;
         this.updateValues(res, card.device.settings);
+        console.log(res);
+        console.log(card.device.settings);
       }, err => {
         card.loading = false;
       });

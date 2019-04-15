@@ -19,18 +19,27 @@ import { HttpClientModule } from '@angular/common/http';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, NG_VALIDATORS } from '@angular/forms';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatMomentDateModule, MAT_MOMENT_DATE_ADAPTER_OPTIONS } from '@angular/material-moment-adapter';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatSliderModule } from '@angular/material/slider';
+import { GreaterThanValidator } from './validators/greater-than-validator';
+import { IntegerValidator } from './validators/integer-validator';
+import { FloatValidator } from './validators/float-validator';
+import { MatSelectModule } from '@angular/material/select';
 
 @NgModule({
   declarations: [
     AppComponent,
     DevicesComponent,
-    AddDeviceSheetComponent
+    AddDeviceSheetComponent,
+    GreaterThanValidator,
+    IntegerValidator,
+    FloatValidator
   ],
   imports: [
     BrowserModule,
@@ -52,7 +61,10 @@ import { MatExpansionModule } from '@angular/material/expansion';
     MatMomentDateModule,
     MatProgressBarModule,
     MatTooltipModule,
-    MatExpansionModule
+    MatExpansionModule,
+    MatSlideToggleModule,
+    MatSliderModule,
+    MatSelectModule
   ],
   entryComponents: [
     AddDeviceSheetComponent
