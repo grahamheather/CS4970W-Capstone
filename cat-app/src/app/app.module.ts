@@ -31,6 +31,10 @@ import { GreaterThanValidator } from './validators/greater-than-validator';
 import { IntegerValidator } from './validators/integer-validator';
 import { FloatValidator } from './validators/float-validator';
 import { MatSelectModule } from '@angular/material/select';
+import { DeviceComponent } from './device/device.component';
+import { DeviceEditComponent } from './device-edit/device-edit.component';
+import { DeviceSettingsComponent } from './device-settings/device-settings.component';
+import { DeviceSettingsEditComponent } from './device-settings-edit/device-settings-edit.component';
 
 @NgModule({
   declarations: [
@@ -39,7 +43,11 @@ import { MatSelectModule } from '@angular/material/select';
     AddDeviceSheetComponent,
     GreaterThanValidator,
     IntegerValidator,
-    FloatValidator
+    FloatValidator,
+    DeviceComponent,
+    DeviceEditComponent,
+    DeviceSettingsComponent,
+    DeviceSettingsEditComponent
   ],
   imports: [
     BrowserModule,
