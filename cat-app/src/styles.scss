@@ -1,6 +1,6 @@
 @import '~@angular/material/theming';
 @import './app/app.component.theme.scss';
-@import './app/devices/devices.component.theme.scss';
+@import './app/devices-page/devices-page.component.theme.scss';
 @include mat-core();
 
 $app-primary: mat-palette($mat-cyan);
@@ -10,7 +10,7 @@ $app-theme: mat-dark-theme($app-primary, $app-accent);
 
 @include angular-material-theme($app-theme);
 @include app-theme($app-theme);
-@include devices-theme($app-theme);
+@include devices-page-theme($app-theme);
 
 html, body {
     margin: 0;

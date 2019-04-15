@@ -3,7 +3,7 @@ import { NgModule } from '@angular/core';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
-import { DevicesComponent } from './devices/devices.component';
+import { DevicesPageComponent } from './devices-page/devices-page.component';
 
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -35,7 +35,7 @@ import { MatSelectModule } from '@angular/material/select';
 @NgModule({
   declarations: [
     AppComponent,
-    DevicesComponent,
+    DevicesPageComponent,
     AddDeviceSheetComponent,
     GreaterThanValidator,
     IntegerValidator,

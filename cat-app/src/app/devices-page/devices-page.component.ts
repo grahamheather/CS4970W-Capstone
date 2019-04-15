@@ -1,21 +1,19 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
-import { MatBottomSheet, MatBottomSheetConfig } from '@angular/material';
+import { MatBottomSheet } from '@angular/material';
 import { AddDeviceSheetComponent } from '../add-device-sheet/add-device-sheet.component';
 import { DevicesService } from '../services/devices.service';
 import { Device } from '../models/device';
-import { Observable, of } from 'rxjs';
 import { DeviceCard } from '../models/device-card';
-import { map, catchError, tap } from 'rxjs/operators';
-import { Moment } from 'moment';
+import { map } from 'rxjs/operators';
 import { FormGroupDirective, NgForm } from '@angular/forms';
 import { DeviceSettings } from '../models/device-settings';
 
 @Component({
-  selector: 'app-devices',
-  templateUrl: './devices.component.html',
-  styleUrls: ['./devices.component.scss']
+  selector: 'app-devices-page',
+  templateUrl: './devices-page.component.html',
+  styleUrls: ['./devices-page.component.scss']
 })
-export class DevicesComponent implements OnInit {
+export class DevicesPageComponent implements OnInit {
   private loading: boolean = true;
   private readonly ipv4Pattern: string = "\\b(?:(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9]))\\b";
   @ViewChild('editDeviceForm') editDeviceForm: FormGroupDirective;
