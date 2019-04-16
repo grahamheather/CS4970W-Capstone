@@ -40,6 +40,19 @@ export class DevicesPageComponent implements OnInit {
 
   ngOnInit() {}
 
+  private formatDate(date: Date): string {
+    return date.toLocaleDateString('en-US', { 
+      timeZone: 'UTC',
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit', 
+      timeZoneName: 'short', 
+      day: '2-digit', 
+      month: 'short', 
+      year: 'numeric'
+    });
+  }
+
   private updateSettings(form: NgForm, card: DeviceCard): void {
     card.editing = false;
     card.loading = true;
@@ -51,14 +64,10 @@ export class DevicesPageComponent implements OnInit {
     delete form.value.deviceId;
     this.updateValues(form.value, settings.properties);
 
-    console.log(settings);
-
     this.devicesService.updateDeviceSettings(settings)
       .subscribe((res: DeviceSettings) => {
         card.loading = false;
         this.updateValues(res, card.device.settings);
-        console.log(res);
-        console.log(card.device.settings);
       }, err => {
         card.loading = false;
       });
@@ -74,17 +83,10 @@ export class DevicesPageComponent implements OnInit {
       });
   }
 
-  private updateDevice(form: NgForm, card: DeviceCard): void {
+  private updateDevice(device: Device, card: DeviceCard): void {
     card.editing = false;
     card.loading = true;
 
-    const device: Device = {
-      description: form.value.description,
-      deviceId: form.value.deviceId,
-      handle: form.value.handle,
-      ipAddress: form.value.ipAddress,
-      location: form.value.location
-    }
     this.devicesService.updateDevice(device)
       .subscribe((res: Device) => {
         card.loading = false;
@@ -112,19 +114,6 @@ export class DevicesPageComponent implements OnInit {
         }
         this.deviceCards.unshift(card);
       });
-  }
-
-  private formatDate(date: Date): string {
-    return date.toLocaleDateString('en-US', { 
-      timeZone: 'UTC',
-      hour: '2-digit', 
-      minute: '2-digit', 
-      second: '2-digit', 
-      timeZoneName: 'short', 
-      day: '2-digit', 
-      month: 'short', 
-      year: 'numeric'
-    });
   }
 
   private getUtcTime(date: Date): string {

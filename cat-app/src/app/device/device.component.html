@@ -1,3 +1,44 @@
-<p>
-  device works!
-</p>
+<mat-card class="device-card scrollable">
+  <mat-card-header>
+    <mat-icon mat-card-avatar>developer_board</mat-icon>
+    <mat-card-title>{{device.handle}}</mat-card-title>
+    <mat-card-subtitle>{{device.description}}</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    <mat-list>
+      <mat-list-item *ngIf="device.createdDate">
+        <mat-icon mat-list-icon>today</mat-icon>
+        <span>{{formatDate(device.createdDate)}}</span>
+      </mat-list-item>
+      <mat-list-item *ngIf="device.location">
+        <mat-icon mat-list-icon>place</mat-icon>
+        <span>{{device.location}}</span>
+      </mat-list-item>
+      <mat-list-item *ngIf="device.ipAddress">
+        <mat-icon mat-list-icon>device_hub</mat-icon>
+        <span>{{device.ipAddress}}</span>
+      </mat-list-item>
+    </mat-list>
+    <span class="spacer"></span>
+    <mat-progress-bar class="progress-bar" *ngIf="loading" mode="indeterminate" color="accent"></mat-progress-bar>
+  </mat-card-content>
+  <mat-card-actions>
+    <button mat-menu-item (click)="viewSettings.emit()">
+      <mat-icon>settings</mat-icon>
+      <span>View settings</span>
+    </button>
+    <button mat-icon-button [matMenuTriggerFor]="menu">
+      <mat-icon>more_vert</mat-icon>
+    </button>
+    <mat-menu #menu>
+      <button mat-menu-item (click)="viewEdit.emit()">
+        <mat-icon>edit</mat-icon>
+        <span>Edit</span>
+      </button>
+      <button mat-menu-item (click)="delete.emit()">
+        <mat-icon>delete</mat-icon>
+        <span>Delete</span>
+      </button>
+    </mat-menu>
+  </mat-card-actions>
+</mat-card>
