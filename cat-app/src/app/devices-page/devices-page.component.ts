@@ -53,16 +53,9 @@ export class DevicesPageComponent implements OnInit {
     });
   }
 
-  private updateSettings(form: NgForm, card: DeviceCard): void {
+  private updateSettings(settings: DeviceSettings, card: DeviceCard): void {
     card.editing = false;
     card.loading = true;
-
-    const settings: DeviceSettings = {
-      deviceId: form.value.deviceId,
-      properties: {}
-    };
-    delete form.value.deviceId;
-    this.updateValues(form.value, settings.properties);
 
     this.devicesService.updateDeviceSettings(settings)
       .subscribe((res: DeviceSettings) => {

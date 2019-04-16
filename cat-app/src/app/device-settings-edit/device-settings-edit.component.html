@@ -1,3 +1,243 @@
-<p>
-  device-settings-edit works!
-</p>
+<mat-card class="device-card scrollable">
+  <form name="editDeviceSettingsForm" (ngSubmit)="updateSettings.emit(getSettings(editDeviceSettingsForm))" #editDeviceSettingsForm="ngForm">
+    <input type="hidden" name="deviceId" [ngModel]="device.deviceId">
+    <mat-card-header>
+      <mat-icon mat-card-avatar>settings</mat-icon>
+      <mat-card-title>{{device.handle}}</mat-card-title>
+      <mat-card-subtitle>{{device.description}}</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <mat-accordion *ngIf="device.settings">
+        <mat-expansion-panel expanded disabled class="no-header-panel">
+          <div class="line-item-list" dense>
+            <div class="line-item" matTooltipPosition="right" matTooltip="Date the device settings were created">
+              <mat-icon class="line-item-icon">today</mat-icon>
+              <div class="line-item-body">
+                <div class="line-item-content">
+                  <mat-form-field>
+                    <input matInput placeholder="Created date" [ngModel]="device.settings.createdDate" (ngModelChange)="setDate($event, device.settings.createdDate)" name="createdDate" [matDatepicker]="createdDatePicker" required disabled>
+                    <mat-datepicker-toggle [for]="createdDatePicker" matSuffix></mat-datepicker-toggle>
+                    <mat-datepicker #createdDatePicker></mat-datepicker>
+                  </mat-form-field>
+                </div>
+              </div>
+            </div>
+            <div class="line-item" matTooltipPosition="right" matTooltip="Time the device settings were created">
+              <mat-icon class="line-item-icon">access_time</mat-icon>
+              <div class="line-item-body">
+                <div class="line-item-content">
+                  <mat-form-field>
+                    <input matInput placeholder="Created time" [ngModel]="getUtcTime(device.settings.createdDate)" (ngModelChange)="setTime($event, device.settings.createdDate)" name="createdTime" type="time" step="1" required disabled>
+                  </mat-form-field>
+                </div>
+              </div>
+            </div>
+          </div>
+        </mat-expansion-panel>
+      </mat-accordion>
+      <mat-accordion displayMode="flat">
+        <mat-expansion-panel hideToggle>
+          <mat-expansion-panel-header matTooltipPosition="right" matTooltip="Adjust VAD settings">
+            <mat-panel-title>Voice activity detection</mat-panel-title>
+            <mat-panel-description>
+              <mat-icon>record_voice_over</mat-icon>
+            </mat-panel-description>
+          </mat-expansion-panel-header>
+          <div class="line-item-list">
+            <div class="line-item" matTooltipPosition="right" matTooltip="Determines how aggressively noise is filtered">
+              <mat-icon class="line-item-icon">hearing</mat-icon>
+              <div class="line-item-body">
+                <div class="line-item-header">VAD level:</div>
+                <div class="line-item-content">
+                  <mat-slider min="0" max="3" step="1" name="vadLevel" [ngModel]="device.settings.properties.vadLevel || 0" color="primary" #vadLevelSlider></mat-slider>
+                  <span class="form-label">{{vadLevelSlider.value}}</span>
+                </div>
+              </div>
+            </div>
+            <div class="line-item" matTooltipPosition="right" matTooltip="Duration of frame used for VAD">
+              <mat-icon class="line-item-icon">av_timer</mat-icon>
+              <div class="line-item-body">
+                <div class="line-item-header">VAD frame:</div>
+                <div class="line-item-content">
+                  <mat-slider min="10" max="30" step="10" name="vadFrameMs" [ngModel]="device.settings.properties.vadFrameMs || 10" color="primary" #vadFrameMsSlider></mat-slider>
+                  <span class="form-label">{{vadFrameMsSlider.value}} ms</span>
+                </div>
+              </div>
+            </div>
+            <div class="line-item" matTooltipPosition="right" matTooltip="Determines how often VAD checks for speech">
+              <mat-icon class="line-item-icon">replay</mat-icon>
+              <div class="line-item-body">
+                <div class="line-item-content">
+                  <mat-form-field>
+                    <input matInput class="no-arrows" placeholder="VAD sample rate" [ngModel]="device.settings.properties.vadSampleRate || 0" name="vadSampleRate" type="number" float greaterThan="0" #vadSampleRateInput="ngModel">
+                    <span matSuffix class="form-label">secs</span>
+                    <mat-error *ngIf="vadSampleRateInput.hasError('greaterThan')">{{vadSampleRateInput.errors.greaterThan.message}}</mat-error>
+                    <mat-error *ngIf="vadSampleRateInput.hasError('float')">{{vadSampleRateInput.errors.float.message}}</mat-error>
+                  </mat-form-field>
+                </div>
+              </div>
+            </div>
+          </div>
+        </mat-expansion-panel>
+        <mat-expansion-panel hideToggle>
+          <mat-expansion-panel-header matTooltipPosition="right" matTooltip="Adjust recording settings">
+            <mat-panel-title>Recording</mat-panel-title>
+            <mat-panel-description>
+              <mat-icon>mic</mat-icon>
+            </mat-panel-description>
+          </mat-expansion-panel-header>
+          <div class="line-item-list">
+            <div class="line-item" matTooltipPosition="right" matTooltip="Minimum audio sample duration">
+              <mat-icon class="line-item-icon">av_timer</mat-icon>
+              <div class="line-item-body">
+                <div class="line-item-content">
+                  <mat-form-field>
+                    <input matInput class="no-arrows" placeholder="Min sample length" [ngModel]="device.settings.properties.minSampleLengthSecs || 0" name="minSampleLengthSecs" type="number" float greaterThan="0" #minSampleLengthSecsInput="ngModel">
+                    <span matSuffix class="form-label">secs</span>
+                    <mat-error *ngIf="minSampleLengthSecsInput.hasError('greaterThan')">{{minSampleLengthSecsInput.errors.greaterThan.message}}</mat-error>
+                    <mat-error *ngIf="minSampleLengthSecsInput.hasError('float')">{{minSampleLengthSecsInput.errors.float.message}}</mat-error>
+                  </mat-form-field>
+                </div>
+              </div>
+            </div>
+            <div class="line-item" matTooltipPosition="right" matTooltip="Maximum audio sample duration (audio longer than this will be segmented)">
+              <mat-icon class="line-item-icon">av_timer</mat-icon>
+              <div class="line-item-body">
+                <div class="line-item-content">
+                  <mat-form-field>
+                    <input matInput class="no-arrows" placeholder="Max sample length" [ngModel]="device.settings.properties.maxSampleLengthSecs || 0" name="maxSampleLengthSecs" type="number" float greaterThan="0" #maxSampleLengthSecsInput="ngModel">
+                    <span matSuffix class="form-label">secs</span>
+                    <mat-error *ngIf="maxSampleLengthSecsInput.hasError('greaterThan')">{{maxSampleLengthSecsInput.errors.greaterThan.message}}</mat-error>
+                    <mat-error *ngIf="maxSampleLengthSecsInput.hasError('float')">{{maxSampleLengthSecsInput.errors.float.message}}</mat-error>
+                  </mat-form-field>
+                </div>
+              </div>
+            </div>
+            <div class="line-item" matTooltipPosition="right" matTooltip="Gaps of silence longer than this in a sample will stop the sample">
+              <mat-icon class="line-item-icon">volume_mute</mat-icon>
+              <div class="line-item-body">
+                <div class="line-item-content">
+                  <mat-form-field>
+                    <input matInput class="no-arrows" placeholder="Max silence length" [ngModel]="device.settings.properties.maxSilenceLengthSecs || 0" name="maxSilenceLengthSecs" type="number" float greaterThan="0" #maxSilenceLengthSecsInput="ngModel">
+                    <span matSuffix class="form-label">secs</span>
+                    <mat-error *ngIf="maxSilenceLengthSecsInput.hasError('greaterThan')">{{maxSilenceLengthSecsInput.errors.greaterThan.message}}</mat-error>
+                    <mat-error *ngIf="maxSilenceLengthSecsInput.hasError('float')">{{maxSilenceLengthSecsInput.errors.float.message}}</mat-error>
+                  </mat-form-field>
+                </div>
+              </div>
+            </div>
+          </div>
+        </mat-expansion-panel>
+        <mat-expansion-panel hideToggle>
+          <mat-expansion-panel-header matTooltipPosition="right" matTooltip="Adjust device settings">
+            <mat-panel-title>Device</mat-panel-title>
+            <mat-panel-description>
+              <mat-icon>developer_board</mat-icon>
+            </mat-panel-description>
+          </mat-expansion-panel-header>
+          <div class="line-item-list">
+            <div class="line-item" matTooltipPosition="right" matTooltip="When device's free storage falls below this threshold, it will stop recording and continue to process speech">
+              <mat-icon class="line-item-icon">sd_storage</mat-icon>
+              <div class="line-item-body">
+                <div class="line-item-content">
+                  <mat-form-field>
+                    <input matInput class="no-arrows" placeholder="Stop recording threshold" [ngModel]="device.settings.properties.stopRecordingThreshold || 0" name="stopRecordingThreshold" type="number" integer greaterThan="0" #stopRecordingThresholdInput="ngModel">
+                    <span matSuffix class="form-label">bytes</span>
+                    <mat-error *ngIf="stopRecordingThresholdInput.hasError('greaterThan')">{{stopRecordingThresholdInput.errors.greaterThan.message}}</mat-error>
+                    <mat-error *ngIf="stopRecordingThresholdInput.hasError('integer')">{{stopRecordingThresholdInput.errors.integer.message}}</mat-error>
+                  </mat-form-field>
+                </div>
+              </div>
+            </div>
+            <div class="line-item" matTooltipPosition="right" matTooltip="Rate of recording (set according to microphone)">
+              <mat-icon class="line-item-icon">mic</mat-icon>
+              <div class="line-item-body">
+                <div class="line-item-content">
+                  <mat-form-field>
+                    <mat-label>Microphone sample rate</mat-label>
+                    <mat-select name="microphoneSampleRate" [ngModel]="device.settings.properties.microphoneSampleRate || '48000'">
+                      <mat-option value="8000">8000</mat-option>
+                      <mat-option value="16000">16000</mat-option>
+                      <mat-option value="32000">32000</mat-option>
+                      <mat-option value="48000">48000</mat-option>
+                    </mat-select>
+                    <span matSuffix class="form-label">Hz</span>
+                  </mat-form-field>
+                </div>
+              </div>
+            </div>
+          </div>
+        </mat-expansion-panel>
+        <mat-expansion-panel hideToggle [disabled]="!speakerDiarizationToggle.checked" #speakerDiarizationPanel>
+          <mat-expansion-panel-header matTooltipPosition="right" matTooltip="Determines whether new speakers are identified">
+            <mat-panel-title>Speaker diarization:</mat-panel-title>
+            <mat-panel-description>
+              <mat-slide-toggle [ngModel]="device.settings.properties.speakerDiarizationEnabled || true" name="speakerDiarizationEnabled" (change)="speakerDiarizationPanel.close()" color="primary" #speakerDiarizationToggle></mat-slide-toggle>
+              <mat-icon *ngIf="!speakerDiarizationToggle.checked">person_add_disabled</mat-icon>
+              <mat-icon *ngIf="speakerDiarizationToggle.checked">person_add</mat-icon>
+            </mat-panel-description>
+          </mat-expansion-panel-header>
+          <div class="line-item-list" dense *ngIf="speakerDiarizationToggle.checked">
+            <div class="line-item" matTooltipPosition="right" matTooltip="Determines how many speakers can be identified in a single audio sample">
+              <mat-icon class="line-item-icon">group_add</mat-icon>
+              <div class="line-item-body">
+                <div class="line-item-header">Max speakers per sample:</div>
+                <div class="line-item-content">
+                  <mat-slider min="2" max="9" step="1" name="maxSpeakersPerSample" [ngModel]="device.settings.properties.maxSpeakersPerSample || 2" color="primary" #maxSpeakersPerSampleSlider></mat-slider>
+                  <span class="form-label">{{maxSpeakersPerSampleSlider.value}}</span>
+                </div>
+              </div>
+            </div>
+            <div class="line-item" matTooltipPosition="right" matTooltip="Threshold at which a speaker is classified as a new speaker">
+              <mat-icon class="line-item-icon">record_voice_over</mat-icon>
+              <div class="line-item-body">
+                <div class="line-item-content">
+                  <mat-form-field>
+                    <input matInput class="no-arrows" placeholder="Speaker reid distance threshold" [ngModel]="device.settings.properties.speakerReidDistanceThreshold || 3" name="speakerReidDistanceThreshold" type="number" integer greaterThan="0" #speakerReidDistanceThresholdInput="ngModel">
+                    <mat-error *ngIf="speakerReidDistanceThresholdInput.hasError('greaterThan')">{{speakerReidDistanceThresholdInput.errors.greaterThan.message}}</mat-error>
+                    <mat-error *ngIf="speakerReidDistanceThresholdInput.hasError('integer')">{{speakerReidDistanceThresholdInput.errors.integer.message}}</mat-error>
+                  </mat-form-field>
+                </div>
+              </div>
+            </div>
+            <div class="line-item" matTooltipPosition="right" matTooltip="Determines how many speakers to track">
+              <mat-icon class="line-item-icon">group</mat-icon>
+              <div class="line-item-body">
+                <div class="line-item-content">
+                  <mat-form-field>
+                    <input matInput class="no-arrows" placeholder="Max speakers" [ngModel]="device.settings.properties.maxSpeakers || 1" name="maxSpeakers" type="number" integer greaterThan="1" #maxSpeakersInput="ngModel">
+                    <mat-error *ngIf="maxSpeakersInput.hasError('greaterThan')">{{maxSpeakersInput.errors.greaterThan.message}}</mat-error>
+                    <mat-error *ngIf="maxSpeakersInput.hasError('integer')">{{maxSpeakersInput.errors.integer.message}}</mat-error>
+                  </mat-form-field>
+                </div>
+              </div>
+            </div>
+            <div class="line-item" matTooltipPosition="right" matTooltip="Determines how many days to track a speaker">
+              <mat-icon class="line-item-icon">calendar_today</mat-icon>
+              <div class="line-item-body">
+                <div class="line-item-content">
+                  <mat-form-field>
+                    <input matInput class="no-arrows" placeholder="Speaker forget interval" [ngModel]="device.settings.properties.daysToForgetSpeaker || 1" name="daysToForgetSpeaker" type="number" integer greaterThan="1" #daysToForgetSpeakerInput="ngModel">
+                    <span matSuffix class="form-label">days</span>
+                    <mat-error *ngIf="daysToForgetSpeakerInput.hasError('greaterThan')">{{daysToForgetSpeakerInput.errors.greaterThan.message}}</mat-error>
+                    <mat-error *ngIf="daysToForgetSpeakerInput.hasError('integer')">{{daysToForgetSpeakerInput.errors.integer.message}}</mat-error>
+                  </mat-form-field>
+                </div>
+              </div>
+            </div>
+          </div>
+        </mat-expansion-panel>
+      </mat-accordion>
+    </mat-card-content>
+    <mat-card-actions>
+      <button mat-menu-item [disabled]="!editDeviceSettingsForm.form.dirty || !editDeviceSettingsForm.form.valid">
+        <mat-icon>check</mat-icon>
+        <span>Submit</span>
+      </button>
+      <button mat-menu-item (click)="cancelEdit.emit()">
+        <mat-icon>cancel</mat-icon>
+        <span>Cancel</span>
+      </button>
+    </mat-card-actions>
+  </form>
+</mat-card>

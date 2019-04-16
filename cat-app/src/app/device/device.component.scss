@@ -1,0 +1,52 @@
+.scrollable {
+    overflow-y: auto;
+
+    &::-webkit-scrollbar {
+        width: .5rem;
+    }
+    &::-webkit-scrollbar-thumb {
+        border-radius: 0 .25rem .25rem 0;
+    }
+}
+
+.device-card {
+    flex: 0 1 100%;
+    width: 20rem;
+    margin: 1.25rem 1.75rem;
+    display: flex;
+    flex-direction: column;
+    max-height: 20rem;
+
+    mat-card-header {
+        flex: 1 0 auto;
+
+        mat-icon[mat-card-avatar] {
+            display: flex;
+            justify-content: center;
+        }
+
+        mat-card-title, mat-card-subtitle {
+            text-overflow: ellipsis;
+            overflow: hidden;
+        }
+    }
+
+    mat-card-content {
+        flex: 0 1 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    mat-card-actions {
+        display: flex;
+        align-items: center;
+    }
+}
+
+.spacer {
+    flex: 0 1 100%;
+}
+
+.progress-bar {
+    flex: 0 0 auto;
+}

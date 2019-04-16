@@ -1,0 +1,130 @@
+.scrollable {
+    overflow-y: auto;
+
+    &::-webkit-scrollbar {
+        width: .5rem;
+    }
+    &::-webkit-scrollbar-thumb {
+        border-radius: 0 .25rem .25rem 0;
+    }
+}
+
+.device-card {
+    flex: 0 1 100%;
+    width: 20rem;
+    margin: 1.25rem 1.75rem;
+    display: flex;
+    flex-direction: column;
+    max-height: 20rem;
+
+    mat-card-header {
+        flex: 1 0 auto;
+
+        mat-icon[mat-card-avatar] {
+            display: flex;
+            justify-content: center;
+        }
+
+        mat-card-title, mat-card-subtitle {
+            text-overflow: ellipsis;
+            overflow: hidden;
+        }
+    }
+
+    form {
+        flex: 0 1 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    mat-card-content {
+        flex: 0 1 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    mat-card-actions {
+        display: flex;
+        align-items: center;
+    }
+
+    form>mat-card-actions {
+        margin-bottom: -8px;
+    }
+}
+
+.spacer {
+    flex: 0 1 100%;
+}
+
+.progress-bar {
+    flex: 0 0 auto;
+}
+
+.no-header-panel {
+    padding-top: 1rem;
+}
+
+mat-panel-description {
+    justify-content: flex-end;
+    align-items: center;
+    margin-right: 0;
+
+    mat-icon {
+        padding-left: 1rem;
+    }
+}
+
+.line-item-list {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+
+    &[dense] {
+        .line-item {
+            padding-bottom: 0;
+            
+            .line-item-body {
+                .line-item-header {
+                    font-size: .875rem;
+                }
+            }
+        }
+    }
+
+    .line-item {
+        display: flex;
+        align-items: center;
+        padding-bottom: 1rem;
+
+        &:last-child {
+            padding-bottom: 0;
+        }
+    
+        .line-item-icon {
+            padding: .25rem;
+        }
+        .line-item-body {
+            padding-left: 1rem;
+            flex: 0 1 100%;
+            display: flex;
+            flex-direction: column;
+    
+            .line-item-header {
+                font-size: 1rem;
+            }
+            .line-item-content {
+                font-size: .875rem;
+            }
+        }
+    }
+}
+
+.no-arrows::-webkit-outer-spin-button,
+.no-arrows::-webkit-inner-spin-button {
+    display: none;
+}
+
+.form-label {
+    padding-left: 1rem;
+}

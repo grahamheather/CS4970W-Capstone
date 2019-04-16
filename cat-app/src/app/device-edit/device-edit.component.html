@@ -1,3 +1,60 @@
-<p>
-  device-edit works!
-</p>
+<mat-card class="device-card scrollable">
+  <form name="editDeviceForm" (ngSubmit)="updateDevice.emit(getDevice(editDeviceForm))" #editDeviceForm="ngForm">
+    <input type="hidden" name="deviceId" [ngModel]="device.deviceId">
+    <mat-card-header>
+      <mat-icon mat-card-avatar>developer_board</mat-icon>
+      <mat-card-title>
+        <mat-form-field>
+          <input matInput placeholder="Handle" [ngModel]="device.handle" name="handle" #handle="ngModel" maxlength="50" required>
+          <mat-error *ngIf="handle.hasError('required')">Handle is required</mat-error>
+        </mat-form-field>
+      </mat-card-title>
+      <mat-card-subtitle>
+        <mat-form-field>
+          <input matInput placeholder="Description" [ngModel]="device.description" name="description" maxlength="100">
+        </mat-form-field>
+      </mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <mat-list>
+        <mat-list-item>
+          <mat-icon mat-list-icon>today</mat-icon>
+          <mat-form-field>
+            <input matInput placeholder="Created date" [ngModel]="device.createdDate" name="createdDate" type="datetime" [matDatepicker]="createdDatePicker" required disabled>
+            <mat-datepicker-toggle [for]="createdDatePicker" matSuffix></mat-datepicker-toggle>
+            <mat-datepicker #createdDatePicker></mat-datepicker>
+          </mat-form-field>
+        </mat-list-item>
+        <mat-list-item>
+          <mat-icon mat-list-icon>access_time</mat-icon>
+          <mat-form-field>
+            <input matInput placeholder="Created time" [ngModel]="getUtcTime(device.createdDate)" name="createdTime" type="time" step="1" required disabled>
+          </mat-form-field>
+        </mat-list-item>
+        <mat-list-item>
+          <mat-icon mat-list-icon>place</mat-icon>
+          <mat-form-field>
+            <input matInput placeholder="Location" [ngModel]="device.location" name="location" maxlength="50">
+          </mat-form-field>
+        </mat-list-item>
+        <mat-list-item>
+          <mat-icon mat-list-icon>device_hub</mat-icon>
+          <mat-form-field>
+            <input matInput placeholder="IP address" [ngModel]="device.ipAddress" name="ipAddress" #ipAddress="ngModel" maxlength="15" pattern="{{ipv4Pattern}}">
+            <mat-error *ngIf="ipAddress.hasError('pattern')">Invalid IPv4 address</mat-error>
+          </mat-form-field>
+        </mat-list-item>
+      </mat-list>
+    </mat-card-content>
+    <mat-card-actions>
+      <button mat-menu-item type="submit" [disabled]="!editDeviceForm.form.dirty || !editDeviceForm.form.valid">
+        <mat-icon>check</mat-icon>
+        <span>Submit</span>
+      </button>
+      <button mat-menu-item (click)="cancelEdit.emit()">
+        <mat-icon>cancel</mat-icon>
+        <span>Cancel</span>
+      </button>
+    </mat-card-actions>
+  </form>
+</mat-card>

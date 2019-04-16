@@ -1,3 +1,184 @@
-<p>
-  device-settings works!
-</p>
+<mat-card class="device-card scrollable">
+  <mat-card-header>
+    <mat-icon mat-card-avatar>settings</mat-icon>
+    <mat-card-title>{{device.handle}}</mat-card-title>
+    <mat-card-subtitle>{{device.description}}</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    <mat-progress-bar class="progress-bar" *ngIf="loading" mode="indeterminate" color="accent"></mat-progress-bar>
+    <mat-accordion>
+      <mat-expansion-panel expanded disabled class="no-header-panel">
+        <div class="line-item-list">
+          <div class="line-item" matTooltipPosition="right" matTooltip="Date and time the device settings were created">
+            <mat-icon class="line-item-icon">today</mat-icon>
+            <div class="line-item-body">
+              <div class="line-item-header">Created date:</div>
+              <div class="line-item-content">{{formatDate(device.settings.createdDate)}}</div>
+            </div>
+          </div>
+        </div>
+      </mat-expansion-panel>
+    </mat-accordion>
+    <mat-accordion displayMode="flat">
+      <mat-expansion-panel hideToggle>
+        <mat-expansion-panel-header matTooltipPosition="right" matTooltip="Adjust VAD settings">
+          <mat-panel-title>Voice activity detection</mat-panel-title>
+          <mat-panel-description>
+            <mat-icon>record_voice_over</mat-icon>
+          </mat-panel-description>
+        </mat-expansion-panel-header>
+        <div class="line-item-list">
+          <div class="line-item" matTooltipPosition="right" matTooltip="Determines how aggressively noise is filtered">
+            <mat-icon class="line-item-icon">hearing</mat-icon>
+            <div class="line-item-body">
+              <div class="line-item-header">VAD level:</div>
+              <div class="line-item-content">{{device.settings.properties.vadLevel}}</div>
+            </div>
+          </div>
+          <div class="line-item" matTooltipPosition="right" matTooltip="Duration of frame used for VAD">
+            <mat-icon class="line-item-icon">av_timer</mat-icon>
+            <div class="line-item-body">
+              <div class="line-item-header">VAD frame:</div>
+              <div class="line-item-content">
+                {{device.settings.properties.vadFrameMs}}
+                <span *ngIf="device.settings.properties.vadFrameMs"> ms</span>
+              </div>
+            </div>
+          </div>
+          <div class="line-item" matTooltipPosition="right" matTooltip="Determines how often VAD checks for speech">
+            <mat-icon class="line-item-icon">replay</mat-icon>
+            <div class="line-item-body">
+              <div class="line-item-header">VAD sample rate:</div>
+              <div class="line-item-content">
+                {{device.settings.properties.vadSampleRate}}
+                <span *ngIf="device.settings.properties.vadSampleRate"> secs</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </mat-expansion-panel>
+      <mat-expansion-panel hideToggle>
+        <mat-expansion-panel-header matTooltipPosition="right" matTooltip="Adjust recording settings">
+          <mat-panel-title>Recording</mat-panel-title>
+          <mat-panel-description>
+            <mat-icon>mic</mat-icon>
+          </mat-panel-description>
+        </mat-expansion-panel-header>
+        <div class="line-item-list">
+          <div class="line-item" matTooltipPosition="right" matTooltip="Minimum audio sample duration">
+            <mat-icon class="line-item-icon">av_timer</mat-icon>
+            <div class="line-item-body">
+              <div class="line-item-header">Min sample length:</div>
+              <div class="line-item-content">
+                {{device.settings.properties.minSampleLengthSecs}}
+                <span *ngIf="device.settings.properties.minSampleLengthSecs"> secs</span>
+              </div>
+            </div>
+          </div>
+          <div class="line-item" matTooltipPosition="right" matTooltip="Maximum audio sample duration (audio longer than this will be segmented)">
+            <mat-icon class="line-item-icon">av_timer</mat-icon>
+            <div class="line-item-body">
+              <div class="line-item-header">Max sample length:</div>
+              <div class="line-item-content">
+                {{device.settings.properties.maxSampleLengthSecs}}
+                <span *ngIf="device.settings.properties.maxSampleLengthSecs"> secs</span>
+              </div>
+            </div>
+          </div>
+          <div class="line-item" matTooltipPosition="right" matTooltip="Gaps of silence longer than this in a sample will stop the sample">
+            <mat-icon class="line-item-icon">volume_mute</mat-icon>
+            <div class="line-item-body">
+              <div class="line-item-header">Max silence length:</div>
+              <div class="line-item-content">
+                {{device.settings.properties.maxSilenceLengthSecs}}
+                <span *ngIf="device.settings.properties.maxSilenceLengthSecs"> secs</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </mat-expansion-panel>
+      <mat-expansion-panel hideToggle>
+        <mat-expansion-panel-header matTooltipPosition="right" matTooltip="Adjust device settings">
+          <mat-panel-title>Device</mat-panel-title>
+          <mat-panel-description>
+            <mat-icon>developer_board</mat-icon>
+          </mat-panel-description>
+        </mat-expansion-panel-header>
+        <div class="line-item-list">
+          <div class="line-item" matTooltipPosition="right" matTooltip="When device's free storage falls below this threshold, it will stop recording and continue to process speech">
+            <mat-icon class="line-item-icon">sd_storage</mat-icon>
+            <div class="line-item-body">
+              <div class="line-item-header">Stop recording threshold:</div>
+              <div class="line-item-content">
+                {{device.settings.properties.stopRecordingThreshold}}
+                <span *ngIf="device.settings.properties.stopRecordingThreshold"> bytes</span>
+              </div>
+            </div>
+          </div>
+          <div class="line-item" matTooltipPosition="right" matTooltip="Rate of recording (set according to microphone)">
+            <mat-icon class="line-item-icon">mic</mat-icon>
+            <div class="line-item-body">
+              <div class="line-item-header">Microphone sample rate:</div>
+              <div class="line-item-content">
+                {{device.settings.properties.microphoneSampleRate}}
+                <span *ngIf="device.settings.properties.microphoneSampleRate"> Hz</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </mat-expansion-panel>
+      <mat-expansion-panel hideToggle [disabled]="!device.settings.properties.speakerDiarizationEnabled">
+        <mat-expansion-panel-header matTooltipPosition="right" matTooltip="Determines whether new speakers are identified">
+          <mat-panel-title>Speaker diarization:</mat-panel-title>
+          <mat-panel-description>
+            <mat-icon *ngIf="!device.settings.properties.speakerDiarizationEnabled">person_add_disabled</mat-icon>
+            <mat-icon *ngIf="device.settings.properties.speakerDiarizationEnabled">person_add</mat-icon>
+          </mat-panel-description>
+        </mat-expansion-panel-header>
+        <div class="line-item-list">
+          <div class="line-item" matTooltipPosition="right" matTooltip="Determines how many speakers can be identified in a single audio sample">
+            <mat-icon class="line-item-icon">group_add</mat-icon>
+            <div class="line-item-body">
+              <div class="line-item-header">Max speakers per sample:</div>
+              <div class="line-item-content">{{device.settings.properties.maxSpeakersPerSample}}</div>
+            </div>
+          </div>
+          <div class="line-item" matTooltipPosition="right" matTooltip="Threshold at which a speaker is classified as a new speaker">
+            <mat-icon class="line-item-icon">record_voice_over</mat-icon>
+            <div class="line-item-body">
+              <div class="line-item-header">Speaker reid distance threshold:</div>
+              <div class="line-item-content">{{device.settings.properties.speakerReidDistanceThreshold}}</div>
+            </div>
+          </div>
+          <div class="line-item" matTooltipPosition="right" matTooltip="Determines how many speakers to track">
+            <mat-icon class="line-item-icon">group</mat-icon>
+            <div class="line-item-body">
+              <div class="line-item-header">Max speakers:</div>
+              <div class="line-item-content">{{device.settings.properties.maxSpeakers}}</div>
+            </div>
+          </div>
+          <div class="line-item" matTooltipPosition="right" matTooltip="Determines how many days to track a speaker">
+            <mat-icon class="line-item-icon">calendar_today</mat-icon>
+            <div class="line-item-body">
+              <div class="line-item-header">Speaker forget interval:</div>
+              <div class="line-item-content">
+                {{device.settings.properties.daysToForgetSpeaker}}
+                <span *ngIf="device.settings.properties.daysToForgetSpeaker"> days</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </mat-expansion-panel>
+    </mat-accordion>
+  </mat-card-content>
+  <mat-card-actions>
+    <button mat-menu-item (click)="viewDevice.emit()">
+      <mat-icon>developer_board</mat-icon>
+      <span>View device</span>
+    </button>
+    <button mat-menu-item (click)="viewEdit.emit()">
+      <mat-icon>edit</mat-icon>
+      <span>Edit settings</span>
+    </button>
+  </mat-card-actions>
+</mat-card>

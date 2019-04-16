@@ -5,6 +5,7 @@
     <mat-card-subtitle>{{device.description}}</mat-card-subtitle>
   </mat-card-header>
   <mat-card-content>
+    <mat-progress-bar class="progress-bar" *ngIf="loading" mode="indeterminate" color="accent"></mat-progress-bar>
     <mat-list>
       <mat-list-item *ngIf="device.createdDate">
         <mat-icon mat-list-icon>today</mat-icon>
@@ -19,8 +20,6 @@
         <span>{{device.ipAddress}}</span>
       </mat-list-item>
     </mat-list>
-    <span class="spacer"></span>
-    <mat-progress-bar class="progress-bar" *ngIf="loading" mode="indeterminate" color="accent"></mat-progress-bar>
   </mat-card-content>
   <mat-card-actions>
     <button mat-menu-item (click)="viewSettings.emit()">
