@@ -1,10 +1,11 @@
 
-<form class="add-device-form" name="addDeviceForm" (ngSubmit)="createDevice(addDeviceForm)" #addDeviceForm="ngForm">
+<form class="add-device-form" name="addDeviceForm" (ngSubmit)="addDevice.emit(getDevice(addDeviceForm))" #addDeviceForm="ngForm">
   <div class="title">
     <mat-icon>perm_device_information</mat-icon>
     <span>Add device</span>
   </div>
   <div class="content">
+    <mat-progress-bar class="progress-bar" *ngIf="loading" mode="indeterminate" color="accent"></mat-progress-bar>
     <mat-list>
       <h3 mat-subheader>Properties</h3>
       <mat-list-item>
@@ -36,7 +37,6 @@
       <mat-divider></mat-divider>
       <h3 mat-subheader>Settings</h3>
     </mat-list>
-    <mat-progress-bar class="progress-bar" *ngIf="loading" mode="indeterminate" color="accent"></mat-progress-bar>
   </div>
   <div class="actions">
     <button mat-menu-item type="submit" [disabled]="!addDeviceForm.form.dirty || !addDeviceForm.form.valid">

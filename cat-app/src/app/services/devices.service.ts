@@ -73,13 +73,12 @@ export class DevicesService {
   }
 
   createDevice(device: Device): Observable<Device> {
-    let settings = {};
-    if(device.settings) {
-      if(device.settings.properties) {
-        settings = device.settings.properties;
-      }
-      device.settings = null;
+    let settings = '{}';
+    if(device.settings && device.settings.properties) {
+      settings = JSON.stringify(device.settings.properties);
     }
+    device.settings = null;
+    
     return this.http.post(`${this.baseUrl}/devices`, `${this.urlEncode(device)}&settings=${JSON.stringify(settings)}`, {
       headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')
     }).pipe(

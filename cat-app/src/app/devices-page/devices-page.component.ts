@@ -1,11 +1,10 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, EventEmitter } from '@angular/core';
 import { MatBottomSheet } from '@angular/material';
 import { AddDeviceSheetComponent } from '../add-device-sheet/add-device-sheet.component';
 import { DevicesService } from '../services/devices.service';
 import { Device } from '../models/device';
 import { DeviceCard } from '../models/device-card';
 import { map } from 'rxjs/operators';
-import { FormGroupDirective, NgForm } from '@angular/forms';
 import { DeviceSettings } from '../models/device-settings';
 
 @Component({
@@ -16,8 +15,8 @@ import { DeviceSettings } from '../models/device-settings';
 export class DevicesPageComponent implements OnInit {
   private loading: boolean = true;
   private readonly ipv4Pattern: string = "\\b(?:(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9]))\\b";
-  @ViewChild('editDeviceForm') editDeviceForm: FormGroupDirective;
   deviceCards: DeviceCard[];
+  private addDeviceSheet: AddDeviceSheetComponent;
 
   constructor(private bottomSheet: MatBottomSheet, private devicesService: DevicesService) {
     this.devicesService.getAllDevices()
@@ -51,6 +50,24 @@ export class DevicesPageComponent implements OnInit {
       month: 'short', 
       year: 'numeric'
     });
+  }
+
+  createDevice(device: Device) {
+    this.addDeviceSheet.loading = true;
+
+    this.devicesService.createDevice(device)
+      .subscribe((res: Device) => {
+        const card: DeviceCard = {
+          device: res
+        }
+        this.deviceCards.unshift(card);
+
+        this.addDeviceSheet.loading = false;
+
+        this.addDeviceSheet.closeSheet();
+      }, err => {
+        this.addDeviceSheet.loading = false;
+      }); 
   }
 
   private updateSettings(settings: DeviceSettings, card: DeviceCard): void {
@@ -98,14 +115,11 @@ export class DevicesPageComponent implements OnInit {
   }
 
   openAddDeviceSheet(): void {
-    this.bottomSheet.open(AddDeviceSheetComponent);
-    this.bottomSheet._openedBottomSheetRef.afterDismissed()
-      .subscribe((dev: Device) => {
-        if(!dev) { return; }
-        const card: DeviceCard = {
-          device: dev
-        }
-        this.deviceCards.unshift(card);
+    const sheetRef = this.bottomSheet.open(AddDeviceSheetComponent);
+    this.addDeviceSheet = sheetRef.instance;
+    const sub = this.addDeviceSheet.addDevice
+      .subscribe(dev => {
+        this.createDevice(dev);
       });
   }
 
