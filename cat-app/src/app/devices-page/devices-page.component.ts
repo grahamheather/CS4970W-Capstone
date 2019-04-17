@@ -1,5 +1,5 @@
 import { Component, OnInit, ViewChild, EventEmitter } from '@angular/core';
-import { MatBottomSheet } from '@angular/material';
+import { MatBottomSheet, MatBottomSheetConfig } from '@angular/material';
 import { AddDeviceSheetComponent } from '../add-device-sheet/add-device-sheet.component';
 import { DevicesService } from '../services/devices.service';
 import { Device } from '../models/device';
@@ -17,8 +17,13 @@ export class DevicesPageComponent implements OnInit {
   private readonly ipv4Pattern: string = "\\b(?:(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9]))\\b";
   deviceCards: DeviceCard[];
   private addDeviceSheet: AddDeviceSheetComponent;
+  private bottomSheetConfig: MatBottomSheetConfig = new MatBottomSheetConfig();
 
   constructor(private bottomSheet: MatBottomSheet, private devicesService: DevicesService) {
+    this.bottomSheetConfig.panelClass = [
+      'scrollable'
+    ];
+
     this.devicesService.getAllDevices()
       .pipe(
         map(devices => 
@@ -115,7 +120,7 @@ export class DevicesPageComponent implements OnInit {
   }
 
   openAddDeviceSheet(): void {
-    const sheetRef = this.bottomSheet.open(AddDeviceSheetComponent);
+    const sheetRef = this.bottomSheet.open(AddDeviceSheetComponent, this.bottomSheetConfig);
     this.addDeviceSheet = sheetRef.instance;
     const sub = this.addDeviceSheet.addDevice
       .subscribe(dev => {

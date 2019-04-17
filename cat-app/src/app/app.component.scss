@@ -23,14 +23,6 @@ mat-toolbar {
     flex: 0 1 100vh;
 }
 
-.scrollable {
-    overflow-y: auto;
-
-    &::-webkit-scrollbar {
-        width: .75rem;
-    }
-}
-
 .spacer {
     flex: 1 1 100%;
 }

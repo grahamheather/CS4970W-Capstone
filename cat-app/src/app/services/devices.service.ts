@@ -78,13 +78,20 @@ export class DevicesService {
       settings = JSON.stringify(device.settings.properties);
     }
     device.settings = null;
-    
+
     return this.http.post(`${this.baseUrl}/devices`, `${this.urlEncode(device)}&settings=${JSON.stringify(settings)}`, {
       headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')
     }).pipe(
       map((dev: Device) => {
         dev.createdDate = new Date(dev.createdDate);
-        dev.settings.createdDate = new Date(dev.settings.createdDate);
+        if(dev.settings) {
+          if(dev.settings.createdDate) {
+            dev.settings.createdDate = new Date(dev.settings.createdDate);
+          }
+          if(dev.settings.properties) {
+            dev.settings.properties = JSON.parse(dev.settings.properties);
+          }
+        }
         return dev;
       })
     );

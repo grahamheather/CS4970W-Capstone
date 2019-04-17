@@ -18,13 +18,27 @@ export class AddDeviceSheetComponent implements OnInit {
   ngOnInit() {
   }
 
+  private updateValues<T>(source: T, dest: T): void {
+    const objValues = Object.values(source);
+    Object.keys(source)
+      .forEach((key, i) => {
+        dest[key] = objValues[i];
+      });
+  }
+
   private getDevice(form: NgForm) {
     const device = {
       description: form.value.description,
       handle: form.value.handle,
       ipAddress: form.value.ipAddress,
-      location: form.value.location
+      location: form.value.location,
+      settings: { properties: {} }
     }
+    delete form.value.description;
+    delete form.value.handle;
+    delete form.value.ipAddress;
+    delete form.value.location;
+    this.updateValues(form.value, device.settings.properties);
     return device;
   }
 

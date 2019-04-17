@@ -16,3 +16,27 @@ html, body {
     margin: 0;
     height: 100vh;
 }
+
+.scrollable {
+    overflow-y: auto;
+
+    &::-webkit-scrollbar {
+        width: .75rem;
+        height: .75rem;
+    }
+    &::-webkit-scrollbar-thumb {
+        background: mat-color(map-get($app-theme, accent));
+    }
+}
+
+mat-bottom-sheet-container {
+    &.scrollable {
+        &::-webkit-scrollbar {
+            width: .5rem;
+            height: .5rem;
+        }
+        &::-webkit-scrollbar-thumb {
+            border-radius: 0 .25rem 0 0;
+        }
+    }
+}

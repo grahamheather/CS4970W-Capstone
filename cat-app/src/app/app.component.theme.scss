@@ -12,11 +12,5 @@
                 background: mat-color($primary, darker);
             }
         }
-
-        .scrollable {
-            &::-webkit-scrollbar-thumb {
-                background: mat-color($accent);
-            }
-        }
     }
 }
