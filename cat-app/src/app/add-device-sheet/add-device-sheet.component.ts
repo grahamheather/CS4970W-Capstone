@@ -9,7 +9,7 @@ import { Device } from '../models/device';
   styleUrls: ['./add-device-sheet.component.scss']
 })
 export class AddDeviceSheetComponent implements OnInit {
-  private readonly ipv4Pattern: string = "\\b(?:(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9]))\\b";
+  readonly ipv4Pattern: string = "\\b(?:(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9]))\\b";
   loading: boolean;
   @Output() addDevice: EventEmitter<Device> = new EventEmitter<Device>();
 
@@ -26,7 +26,7 @@ export class AddDeviceSheetComponent implements OnInit {
       });
   }
 
-  private getDevice(form: NgForm) {
+  getDevice(form: NgForm) {
     const device = {
       description: form.value.description,
       handle: form.value.handle,

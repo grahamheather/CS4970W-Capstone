@@ -13,8 +13,7 @@ import { DeviceSettings } from '../models/device-settings';
   styleUrls: ['./devices-page.component.scss']
 })
 export class DevicesPageComponent implements OnInit {
-  private loading: boolean = true;
-  private readonly ipv4Pattern: string = "\\b(?:(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9]))\\b";
+  loading: boolean = true;
   deviceCards: DeviceCard[];
   private addDeviceSheet: AddDeviceSheetComponent;
   private bottomSheetConfig: MatBottomSheetConfig = new MatBottomSheetConfig();

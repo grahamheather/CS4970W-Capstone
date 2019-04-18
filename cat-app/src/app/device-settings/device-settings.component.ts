@@ -17,7 +17,7 @@ export class DeviceSettingsComponent implements OnInit {
   ngOnInit() {
   }
 
-  private formatDate(date: Date): string {
+  formatDate(date: Date): string {
     return date.toLocaleDateString('en-US', { 
       timeZone: 'UTC',
       hour: '2-digit', 

@@ -12,12 +12,14 @@ export class DeviceEditComponent implements OnInit {
   @Output() updateDevice: EventEmitter<Device> = new EventEmitter<Device>();
   @Output() cancelEdit: EventEmitter<void> = new EventEmitter<void>();
 
+  readonly ipv4Pattern: string = "\\b(?:(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9]))\\b";
+
   constructor() { }
 
   ngOnInit() {
   }
 
-  private getDevice(form: NgForm): Device {
+  getDevice(form: NgForm): Device {
     const device: Device = {
       description: form.value.description,
       deviceId: form.value.deviceId,
@@ -38,7 +40,7 @@ export class DeviceEditComponent implements OnInit {
     return padded + number.toString();
   }
 
-  private getUtcTime(date: Date): string {
+  getUtcTime(date: Date): string {
     if(!date) { return ""; }
     const hours = this.zeroPadNumber(date.getUTCHours(), 2);
     const mins = this.zeroPadNumber(date.getUTCMinutes(), 2);
