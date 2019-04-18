@@ -1,5 +1,7 @@
 # CatApp
 
+[AWS instance](http://ec2-18-222-193-170.us-east-2.compute.amazonaws.com/)
+
 This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 7.3.5.
 
 ## Development server
