@@ -26,7 +26,7 @@ export class DeviceSettingsEditComponent implements OnInit {
       });
   }
 
-  private getSettings(form: NgForm): DeviceSettings {
+  getSettings(form: NgForm): DeviceSettings {
     const settings: DeviceSettings = {
       deviceId: form.value.deviceId,
       properties: {}
