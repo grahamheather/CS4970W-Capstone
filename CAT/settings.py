@@ -5,7 +5,7 @@ from multiprocessing import Lock
 from os import path
 import json
 
-FILENAME = "config.ini"
+FILENAME = path.join("CAT", "config.ini")
 
 
 class Config():
@@ -20,7 +20,7 @@ class Config():
 
 		# read settings file
 		self.config = configparser.ConfigParser()
-		self.config.read(path.join("CAT", FILENAME))
+		self.config.read(FILENAME)
 
 		# read by value type
 		for key in self.config["Integer Values"]:
@@ -105,7 +105,7 @@ class Config():
 				break
 
 		# update the config file on disk
-		with open(path.join("CAT", FILENAME), 'w') as self.config_file:
+		with open(FILENAME, 'w') as self.config_file:
 			self.config.write(self.config_file)
 
 

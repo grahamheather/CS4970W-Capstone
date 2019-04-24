@@ -141,7 +141,7 @@ def test_save_settings(monkeypatch):
 	config = settings.Config()
 
 	# mock filename so it saves in a different file to examine
-	monkeypatch.setattr(settings, "FILENAME", "test_temp.ini")
+	monkeypatch.setattr(settings, "FILENAME", os.path.join("CAT", "test_temp.ini"))
 
 	# parameters
 	new_settings = {
@@ -244,8 +244,8 @@ def test_save_settings_no_semaphore(monkeypatch):
 def test_save_settings_manage_processes(mock_stream, monkeypatch):
 	# make new config file that can be edited
 	testing_config_file = os.path.join(get_test_recording_dir(), "test_temp.ini")
-	copyfile(os.path.join(get_package_dir(), settings.FILENAME), testing_config_file)
-	monkeypatch.setattr(settings, "FILENAME", os.path.join("..", testing_config_file))
+	copyfile(settings.FILENAME, testing_config_file)
+	monkeypatch.setattr(settings, "FILENAME", testing_config_file)
 
 	# set mocks
 	analysis_calls = multiprocessing.Queue()
