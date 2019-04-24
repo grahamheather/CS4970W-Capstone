@@ -24,7 +24,11 @@
   <mat-card-actions>
     <button mat-menu-item (click)="viewSettings.emit()">
       <mat-icon>settings</mat-icon>
-      <span>View settings</span>
+      <span>Settings</span>
+    </button>
+    <button mat-menu-item [routerLink]="[device.deviceId, 'recordings']">
+      <mat-icon>mic</mat-icon>
+      <span>Recordings</span>
     </button>
     <button mat-icon-button [matMenuTriggerFor]="menu">
       <mat-icon>more_vert</mat-icon>

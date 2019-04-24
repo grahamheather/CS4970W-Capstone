@@ -35,6 +35,7 @@ import { DeviceComponent } from './device/device.component';
 import { DeviceEditComponent } from './device-edit/device-edit.component';
 import { DeviceSettingsComponent } from './device-settings/device-settings.component';
 import { DeviceSettingsEditComponent } from './device-settings-edit/device-settings-edit.component';
+import { DeviceRecordingsPageComponent } from './device-recordings-page/device-recordings-page.component';
 
 @NgModule({
   declarations: [
@@ -47,7 +48,8 @@ import { DeviceSettingsEditComponent } from './device-settings-edit/device-setti
     DeviceComponent,
     DeviceEditComponent,
     DeviceSettingsComponent,
-    DeviceSettingsEditComponent
+    DeviceSettingsEditComponent,
+    DeviceRecordingsPageComponent
   ],
   imports: [
     BrowserModule,

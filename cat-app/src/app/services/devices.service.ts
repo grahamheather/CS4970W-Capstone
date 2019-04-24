@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Device } from '../models/device';
-import { map, mergeMap } from 'rxjs/operators';
+import { map, mergeMap, delay } from 'rxjs/operators';
 import { DeviceSettings } from '../models/device-settings';
 
 @Injectable({
@@ -95,5 +95,9 @@ export class DevicesService {
         return dev;
       })
     );
+  }
+
+  getDevice(id: string): Observable<Device> {
+    return this.http.get<Device>(`${this.baseUrl}/devices/${id}`);
   }
 }
