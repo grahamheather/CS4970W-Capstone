@@ -1,6 +1,31 @@
-<div class="device-recordings-root" *ngIf="device$ | async; let device; else loading">
-  <div>{{device.handle}}</div>
+<mat-progress-bar *ngIf="loading$ | async" class="progress-bar" color="accent" mode="indeterminate"></mat-progress-bar>
+<div class="device-recordings-root">
+  <mat-card class="scrollable">
+    <mat-card-header *ngIf="(device$ | async) as device">
+      <mat-icon mat-card-avatar>mic</mat-icon>
+      <mat-card-title>{{device.handle}}</mat-card-title>
+      <mat-card-subtitle>{{device.description}}</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <table mat-table *ngIf="(recordings$ | async)?.length && (recordings$ | async) as recordings" [dataSource]="recordings" class="recordings-table">
+        <ng-container matColumnDef="recordingId">
+          <th mat-header-cell *matHeaderCellDef>Id</th>
+          <td mat-cell *matCellDef="let element">{{element.recordingId}}</td>
+        </ng-container>
+        <ng-container matColumnDef="recordingTime">
+          <th mat-header-cell *matHeaderCellDef>Recording time</th>
+          <td mat-cell *matCellDef="let element">{{formatDate(element.recordingTime)}}</td>
+        </ng-container>
+        <ng-container matColumnDef="data">
+          <th mat-header-cell *matHeaderCellDef>Data</th>
+          <td mat-cell *matCellDef="let element">{{element.data | json}}</td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="['recordingTime', 'data']"></tr>
+        <tr mat-row *matRowDef="let row; columns: ['recordingTime', 'data'];" (click)="openRecordingSheet(recordings, row.recordingId)"></tr>
+      </table>
+      <div *ngIf="!(recordings$ | async)?.length" class="no-recordings">
+        <h3>No recordings</h3>
+      </div>
+    </mat-card-content>
+  </mat-card>
 </div>
-<ng-template #loading>
-    <mat-progress-bar class="progress-bar" color="accent" mode="indeterminate"></mat-progress-bar>
-</ng-template>

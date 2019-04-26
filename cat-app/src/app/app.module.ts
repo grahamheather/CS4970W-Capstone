@@ -36,6 +36,8 @@ import { DeviceEditComponent } from './device-edit/device-edit.component';
 import { DeviceSettingsComponent } from './device-settings/device-settings.component';
 import { DeviceSettingsEditComponent } from './device-settings-edit/device-settings-edit.component';
 import { DeviceRecordingsPageComponent } from './device-recordings-page/device-recordings-page.component';
+import { RecordingsService } from './services/recordings.service';
+import { MatTableModule } from '@angular/material/table';
 
 @NgModule({
   declarations: [
@@ -74,14 +76,16 @@ import { DeviceRecordingsPageComponent } from './device-recordings-page/device-r
     MatExpansionModule,
     MatSlideToggleModule,
     MatSliderModule,
-    MatSelectModule
+    MatSelectModule,
+    MatTableModule
   ],
   entryComponents: [
     AddDeviceSheetComponent
   ],
   providers: [
     DevicesService,
-    { provide: MAT_MOMENT_DATE_ADAPTER_OPTIONS, useValue: { useUtc: true } }
+    { provide: MAT_MOMENT_DATE_ADAPTER_OPTIONS, useValue: { useUtc: true } },
+    RecordingsService
   ],
   bootstrap: [AppComponent]
 })

@@ -29,7 +29,7 @@ export class DevicesService {
                 device.settings.properties = JSON.parse(device.settings.properties);
               }
             }
-          })
+          });
           return devices;
         })
       );
