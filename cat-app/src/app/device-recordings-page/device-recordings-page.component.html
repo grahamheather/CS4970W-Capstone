@@ -20,8 +20,8 @@
           <th mat-header-cell *matHeaderCellDef>Data</th>
           <td mat-cell *matCellDef="let element">{{element.data | json}}</td>
         </ng-container>
-        <tr mat-header-row *matHeaderRowDef="['recordingTime', 'data']"></tr>
-        <tr mat-row *matRowDef="let row; columns: ['recordingTime', 'data'];" (click)="openRecordingSheet(recordings, row.recordingId)"></tr>
+        <tr mat-header-row *matHeaderRowDef="['recordingTime']"></tr>
+        <tr mat-row class="clickable" *matRowDef="let row; columns: ['recordingTime'];" (click)="openRecordingSheet(recordings, row.recordingId)"></tr>
       </table>
       <div *ngIf="!(recordings$ | async)?.length" class="no-recordings">
         <h3>No recordings</h3>

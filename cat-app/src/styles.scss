@@ -46,6 +46,10 @@ html, body {
     }
 }
 
+.clickable {
+    cursor: pointer;
+}
+
 mat-bottom-sheet-container {
     &.scrollable {
         &::-webkit-scrollbar {

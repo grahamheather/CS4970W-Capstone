@@ -84,7 +84,8 @@ import { Ipv4ValidatorDirective } from './validators/ipv4-validator.directive';
     MatTableModule
   ],
   entryComponents: [
-    AddDeviceSheetComponent
+    AddDeviceSheetComponent,
+    RecordingSheetComponent
   ],
   providers: [
     DevicesService,

@@ -2,10 +2,12 @@ import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { ParamMap, ActivatedRoute } from '@angular/router';
 import { DevicesService } from '../services/devices.service';
 import { switchMap, tap, shareReplay } from 'rxjs/operators';
-import { Observable, combineLatest, BehaviorSubject } from 'rxjs';
+import { Observable, combineLatest, BehaviorSubject, of } from 'rxjs';
 import { Device } from '../models/device';
 import { RecordingsService } from '../services/recordings.service';
 import { Recording } from '../models/recording';
+import { RecordingSheetComponent } from '../recording-sheet/recording-sheet.component';
+import { MatBottomSheetConfig, MatBottomSheet } from '@angular/material';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -14,12 +16,17 @@ import { Recording } from '../models/recording';
   styleUrls: ['./device-recordings-page.component.scss']
 })
 export class DeviceRecordingsPageComponent implements OnInit {
+  private bottomSheetConfig: MatBottomSheetConfig = new MatBottomSheetConfig();
   private loadingSubject = new BehaviorSubject<boolean>(true);
   device$: Observable<Device>;
   recordings$: Observable<Recording[]>;
   loading$: Observable<boolean> = this.loadingSubject.asObservable();
 
-  constructor(private route: ActivatedRoute, private devicesService: DevicesService, private recordingsService: RecordingsService) { }
+  constructor(private route: ActivatedRoute, private devicesService: DevicesService, private recordingsService: RecordingsService, private bottomSheet: MatBottomSheet) {
+    this.bottomSheetConfig.panelClass = [
+      'scrollable'
+    ];
+   }
 
   ngOnInit() {
     this.device$ = this.route.paramMap.pipe(
@@ -37,7 +44,7 @@ export class DeviceRecordingsPageComponent implements OnInit {
       shareReplay()
     );
     // TODO: remove after debugging
-    // this.recordings$ = of([{recordingId: 'id 1', data: { test: 'test1'}}, {recordingId:'id2', data: {test: 'test2'}}]);
+    // this.recordings$ = of([{recordingId: 'id 1', data: { test: 'test1'}, recordingTime: new Date()}, {recordingId:'id2', data: {test: 'test2'}, recordingTime: new Date()}]);
     combineLatest(this.recordings$, this.device$).subscribe(
       () => this.loadingSubject.next(false)
     );
@@ -47,7 +54,10 @@ export class DeviceRecordingsPageComponent implements OnInit {
     const recording = recordings.find(e => {
       return e.recordingId === recordingId;
     });
-    console.log('Recording: ', recording);
+    
+    const sheetRef = this.bottomSheet.open(RecordingSheetComponent, this.bottomSheetConfig);
+    const recordingSheet = sheetRef.instance;
+    recordingSheet.showRecording(recording);
   }
 
   formatDate(date: Date): string {
