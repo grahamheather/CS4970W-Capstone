@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Device } from '../models/device';
-import { map, mergeMap, delay } from 'rxjs/operators';
+import { map, mergeMap, delay, tap } from 'rxjs/operators';
 import { DeviceSettings } from '../models/device-settings';
 
 @Injectable({

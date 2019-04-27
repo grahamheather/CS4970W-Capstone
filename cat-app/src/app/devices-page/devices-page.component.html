@@ -1,11 +1,11 @@
 <div class="devices-root">
-  <mat-progress-bar *ngIf="loading" class="progress-bar" color="accent" mode="indeterminate"></mat-progress-bar>
+  <mat-progress-bar *ngIf="loading$ | async" class="progress-bar" color="accent" mode="indeterminate"></mat-progress-bar>
   <div class="devices-container">
-    <span class="device-wrapper" *ngFor="let card of deviceCards; let i = index">
+    <span class="device-wrapper" *ngFor="let card of deviceCards$ | async; let i = index">
       <app-device *ngIf="!card.editing && !card.showSettings" [device]="card.device" [loading]="card.loading" (viewEdit)="card.editing=true" (viewSettings)="card.showSettings=true" (delete)="deleteDevice(card, i)"></app-device>
-      <app-device-edit *ngIf="card.editing && !card.showSettings" [device]="card.device" (cancelEdit)="card.editing=false" (updateDevice)="updateDevice($event,card)"></app-device-edit>
+      <app-device-edit *ngIf="card.editing && !card.showSettings" [device]="card.device" (cancelEdit)="card.editing=false" (updateDevice)="updateDevice($event,card,i)"></app-device-edit>
       <app-device-settings *ngIf="!card.editing && card.showSettings" [device]="card.device" [loading]="card.loading" (viewDevice)="card.showSettings=false" (viewEdit)="card.editing=true"></app-device-settings>
-      <app-device-settings-edit *ngIf="card.editing && card.showSettings" [device]="card.device" (cancelEdit)="card.editing=false" (updateSettings)="updateDevice($event,card)"></app-device-settings-edit>
+      <app-device-settings-edit *ngIf="card.editing && card.showSettings" [device]="card.device" (cancelEdit)="card.editing=false" (updateSettings)="updateSettings($event,card)"></app-device-settings-edit>
     </span>
   </div>
   <button mat-raised-button class="add-device-button" (click)="openAddDeviceSheet()">

@@ -38,6 +38,8 @@ import { DeviceSettingsEditComponent } from './device-settings-edit/device-setti
 import { DeviceRecordingsPageComponent } from './device-recordings-page/device-recordings-page.component';
 import { RecordingsService } from './services/recordings.service';
 import { MatTableModule } from '@angular/material/table';
+import { RecordingSheetComponent } from './recording-sheet/recording-sheet.component';
+import { Ipv4ValidatorDirective } from './validators/ipv4-validator.directive';
 
 @NgModule({
   declarations: [
@@ -51,7 +53,9 @@ import { MatTableModule } from '@angular/material/table';
     DeviceEditComponent,
     DeviceSettingsComponent,
     DeviceSettingsEditComponent,
-    DeviceRecordingsPageComponent
+    DeviceRecordingsPageComponent,
+    RecordingSheetComponent,
+    Ipv4ValidatorDirective
   ],
   imports: [
     BrowserModule,

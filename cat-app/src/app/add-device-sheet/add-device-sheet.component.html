@@ -5,7 +5,7 @@
     <span>Add device</span>
   </div>
   <div class="content">
-    <mat-progress-bar class="progress-bar" *ngIf="loading" mode="indeterminate" color="accent"></mat-progress-bar>
+    <mat-progress-bar class="progress-bar" *ngIf="loading$ | async" mode="indeterminate" color="accent"></mat-progress-bar>
     <mat-list>
       <h3 mat-subheader>Properties</h3>
       <mat-list-item>
@@ -18,20 +18,20 @@
       <mat-list-item>
         <mat-icon mat-list-icon>notes</mat-icon>
         <mat-form-field>
-          <input matInput placeholder="Description" name="description" maxlength="100">
+          <input matInput placeholder="Description" name="description" maxlength="100" ngModel>
         </mat-form-field>
       </mat-list-item>
       <mat-list-item>
         <mat-icon mat-list-icon>place</mat-icon>
         <mat-form-field>
-          <input matInput placeholder="Location" name="location" maxlength="50">
+          <input matInput placeholder="Location" name="location" maxlength="50" ngModel>
         </mat-form-field>
       </mat-list-item>
       <mat-list-item>
         <mat-icon mat-list-icon>language</mat-icon>
         <mat-form-field>
-          <input matInput placeholder="IP address" ngModel name="ipAddress" #ipAddressRef="ngModel" maxlength="15" pattern="{{ipv4Pattern}}">
-          <mat-error *ngIf="ipAddressRef.hasError('pattern')">Invalid IPv4 address</mat-error>
+          <input matInput placeholder="IP address" ngModel name="ipAddress" #ipAddressRef="ngModel" ipv4>
+          <mat-error *ngIf="ipAddressRef.hasError('ipv4')">{{ipAddressRef.errors.ipv4.message}}</mat-error>
         </mat-form-field>
       </mat-list-item>
       <mat-divider></mat-divider>

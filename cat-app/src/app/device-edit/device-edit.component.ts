@@ -1,8 +1,9 @@
-import { Component, OnInit, Input, EventEmitter, Output } from '@angular/core';
+import { Component, OnInit, Input, EventEmitter, Output, ChangeDetectionStrategy } from '@angular/core';
 import { Device } from '../models/device';
 import { NgForm } from '@angular/forms';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-device-edit',
   templateUrl: './device-edit.component.html',
   styleUrls: ['./device-edit.component.scss']
@@ -11,8 +12,6 @@ export class DeviceEditComponent implements OnInit {
   @Input() device: Device;
   @Output() updateDevice: EventEmitter<Device> = new EventEmitter<Device>();
   @Output() cancelEdit: EventEmitter<void> = new EventEmitter<void>();
-
-  readonly ipv4Pattern: string = "\\b(?:(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9]))\\b";
 
   constructor() { }
 

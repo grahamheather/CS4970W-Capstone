@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, EventEmitter } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { MatBottomSheet, MatBottomSheetConfig } from '@angular/material';
 import { AddDeviceSheetComponent } from '../add-device-sheet/add-device-sheet.component';
 import { DevicesService } from '../services/devices.service';
@@ -6,17 +6,21 @@ import { Device } from '../models/device';
 import { DeviceCard } from '../models/device-card';
 import { map } from 'rxjs/operators';
 import { DeviceSettings } from '../models/device-settings';
+import { BehaviorSubject, Observable } from 'rxjs';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-devices-page',
   templateUrl: './devices-page.component.html',
   styleUrls: ['./devices-page.component.scss']
 })
 export class DevicesPageComponent implements OnInit {
-  loading: boolean = true;
-  deviceCards: DeviceCard[];
   private addDeviceSheet: AddDeviceSheetComponent;
   private bottomSheetConfig: MatBottomSheetConfig = new MatBottomSheetConfig();
+  private loadingSubject: BehaviorSubject<boolean> = new BehaviorSubject(true);
+  private deviceCardsSubject: BehaviorSubject<DeviceCard[]> = new BehaviorSubject([]);
+  loading$: Observable<boolean> = this.loadingSubject.asObservable();
+  deviceCards$: Observable<DeviceCard[]> = this.deviceCardsSubject.asObservable();
 
   constructor(private bottomSheet: MatBottomSheet, private devicesService: DevicesService) {
     this.bottomSheetConfig.panelClass = [
@@ -34,10 +38,9 @@ export class DevicesPageComponent implements OnInit {
           })
         )
       ).subscribe(devices => {
-        this.loading = false;
-        this.deviceCards = devices;
-      }, err => {
-        this.loading = false;
+        this.deviceCardsSubject.next(devices);
+      }, err => {}, () => {
+        this.loadingSubject.next(false);
       });
   }
 
@@ -57,64 +60,62 @@ export class DevicesPageComponent implements OnInit {
   }
 
   createDevice(device: Device) {
-    this.addDeviceSheet.loading = true;
+    this.addDeviceSheet.isLoading(true);
 
     this.devicesService.createDevice(device)
       .subscribe((res: Device) => {
         const card: DeviceCard = {
           device: res
         }
-        this.deviceCards.unshift(card);
+        const deviceCards = this.deviceCardsSubject.value;
+        deviceCards.unshift(card);
 
-        this.addDeviceSheet.loading = false;
-
+        this.deviceCardsSubject.next(deviceCards);
         this.addDeviceSheet.closeSheet();
-      }, err => {
-        this.addDeviceSheet.loading = false;
+      }, err => {}, () => {
+        this.addDeviceSheet.isLoading(false);
       }); 
   }
 
   private updateSettings(settings: DeviceSettings, card: DeviceCard): void {
     card.editing = false;
     card.loading = true;
+    this.deviceCardsSubject.next(this.deviceCardsSubject.value);
 
     this.devicesService.updateDeviceSettings(settings)
       .subscribe((res: DeviceSettings) => {
+        Object.assign(card.device.settings, res);
+      }, err => {}, () => {
         card.loading = false;
-        this.updateValues(res, card.device.settings);
-      }, err => {
-        card.loading = false;
+        this.deviceCardsSubject.next(this.deviceCardsSubject.value);
       });
   }
 
   private deleteDevice(card: DeviceCard, index: number) {
     card.loading = true;
+    this.deviceCardsSubject.next(this.deviceCardsSubject.value);
+
     this.devicesService.deleteDevice(card.device)
       .subscribe((dev: Device) => {
-        this.deviceCards.splice(index, 1);
-      }, err => {
+        const deviceCards = this.deviceCardsSubject.value;
+        deviceCards.splice(index, 1);
+      }, err => {}, () => {
         card.loading = false;
+        this.deviceCardsSubject.next(this.deviceCardsSubject.value);
       });
   }
 
   private updateDevice(device: Device, card: DeviceCard): void {
     card.editing = false;
     card.loading = true;
+    this.deviceCardsSubject.next(this.deviceCardsSubject.value);
 
     this.devicesService.updateDevice(device)
       .subscribe((res: Device) => {
+        Object.assign(card.device, res);
+      }, err => {}, () => {
         card.loading = false;
-        this.updateValues(res, card.device);
-      }, (err => {
-        card.loading = false;
-      }));
-  }
-
-  private updateValues<T>(source: T, dest: T): void {
-    const objValues = Object.values(source);
-    Object.keys(source)
-      .forEach((key, i) => {
-        dest[key] = objValues[i];
+        this.deviceCardsSubject.next(this.deviceCardsSubject.value);
       });
   }
 

@@ -32,11 +32,10 @@
 
     mat-card-content {
         flex: 0 1 100%;
-        display: flex;
-        flex-direction: column;
     }
 
     mat-card-actions {
+        flex: 0 0 auto;
         display: flex;
         align-items: center;
     }
@@ -44,10 +43,6 @@
 
 .spacer {
     flex: 0 1 100%;
-}
-
-.progress-bar {
-    flex: 0 0 auto;
 }
 
 .no-header-panel {

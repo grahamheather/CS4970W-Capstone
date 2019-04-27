@@ -1,9 +1,4 @@
-import {  
-    NG_VALIDATORS,  
-    FormControl,  
-    Validator,  
-    ValidationErrors
-   } from '@angular/forms';
+import { NG_VALIDATORS, FormControl, Validator, ValidationErrors } from '@angular/forms';
 import { Directive, Input } from '@angular/core';  
 
 @Directive({

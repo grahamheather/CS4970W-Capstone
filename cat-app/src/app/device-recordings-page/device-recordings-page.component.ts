@@ -1,13 +1,14 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { ParamMap, ActivatedRoute } from '@angular/router';
 import { DevicesService } from '../services/devices.service';
-import { switchMap, map, delay, tap, shareReplay } from 'rxjs/operators';
-import { Observable, combineLatest, empty, of, BehaviorSubject } from 'rxjs';
+import { switchMap, tap, shareReplay } from 'rxjs/operators';
+import { Observable, combineLatest, BehaviorSubject } from 'rxjs';
 import { Device } from '../models/device';
 import { RecordingsService } from '../services/recordings.service';
 import { Recording } from '../models/recording';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-device-recordings-page',
   templateUrl: './device-recordings-page.component.html',
   styleUrls: ['./device-recordings-page.component.scss']

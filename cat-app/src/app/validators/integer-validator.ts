@@ -1,10 +1,5 @@
-import {  
-    NG_VALIDATORS,  
-    FormControl,  
-    Validator,  
-    ValidationErrors
-   } from '@angular/forms';
-import { Directive, Input } from '@angular/core';  
+import { NG_VALIDATORS, FormControl, Validator, ValidationErrors } from '@angular/forms';
+import { Directive } from '@angular/core';  
 
 @Directive({
     selector: '[integer]',
@@ -17,8 +12,6 @@ import { Directive, Input } from '@angular/core';
     ]  
 })
 export class IntegerValidator implements Validator {
-    @Input('integer') value: Number;
-
     validate(c: FormControl): ValidationErrors | null {
         const parsed = Number.parseInt(c.value);
         if(Number.isNaN(parsed)) {

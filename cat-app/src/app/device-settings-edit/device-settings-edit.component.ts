@@ -1,9 +1,10 @@
-import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { Device } from '../models/device';
 import { DeviceSettings } from '../models/device-settings';
 import { NgForm } from '@angular/forms';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-device-settings-edit',
   templateUrl: './device-settings-edit.component.html',
   styleUrls: ['./device-settings-edit.component.scss']
@@ -18,21 +19,13 @@ export class DeviceSettingsEditComponent implements OnInit {
   ngOnInit() {
   }
 
-  private updateValues<T>(source: T, dest: T): void {
-    const objValues = Object.values(source);
-    Object.keys(source)
-      .forEach((key, i) => {
-        dest[key] = objValues[i];
-      });
-  }
-
   getSettings(form: NgForm): DeviceSettings {
     const settings: DeviceSettings = {
       deviceId: form.value.deviceId,
       properties: {}
     };
     delete form.value.deviceId;
-    this.updateValues(form.value, settings.properties);
+    Object.assign(settings.properties, form.value);
     return settings;
   }
 

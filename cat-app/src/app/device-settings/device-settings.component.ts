@@ -1,7 +1,8 @@
-import { Component, OnInit, Input, EventEmitter, Output } from '@angular/core';
+import { Component, OnInit, Input, EventEmitter, Output, ChangeDetectionStrategy } from '@angular/core';
 import { Device } from '../models/device';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-device-settings',
   templateUrl: './device-settings.component.html',
   styleUrls: ['./device-settings.component.scss']

@@ -1,16 +1,18 @@
-import { Component, OnInit, Output, EventEmitter, Input } from '@angular/core';
+import { Component, OnInit, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { MatBottomSheetRef } from '@angular/material';
 import { NgForm } from '@angular/forms';
 import { Device } from '../models/device';
+import { BehaviorSubject, Observable } from 'rxjs';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-add-device-sheet',
   templateUrl: './add-device-sheet.component.html',
   styleUrls: ['./add-device-sheet.component.scss']
 })
 export class AddDeviceSheetComponent implements OnInit {
-  readonly ipv4Pattern: string = "\\b(?:(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9]))\\b";
-  loading: boolean;
+  private loadingSubject: BehaviorSubject<boolean> = new BehaviorSubject(false);
+  loading$: Observable<boolean> = this.loadingSubject.asObservable();
   @Output() addDevice: EventEmitter<Device> = new EventEmitter<Device>();
 
   constructor(private bottomSheetRef: MatBottomSheetRef<AddDeviceSheetComponent>) { }
@@ -18,12 +20,8 @@ export class AddDeviceSheetComponent implements OnInit {
   ngOnInit() {
   }
 
-  private updateValues<T>(source: T, dest: T): void {
-    const objValues = Object.values(source);
-    Object.keys(source)
-      .forEach((key, i) => {
-        dest[key] = objValues[i];
-      });
+  isLoading(value: boolean) {
+    this.loadingSubject.next(value);
   }
 
   getDevice(form: NgForm) {
@@ -38,7 +36,7 @@ export class AddDeviceSheetComponent implements OnInit {
     delete form.value.handle;
     delete form.value.ipAddress;
     delete form.value.location;
-    this.updateValues(form.value, device.settings.properties);
+    Object.assign(device.settings.properties, form.value);
     return device;
   }
 

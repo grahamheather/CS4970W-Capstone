@@ -1,10 +1,5 @@
-import {  
-    NG_VALIDATORS,  
-    FormControl,  
-    Validator,  
-    ValidationErrors
-   } from '@angular/forms';
-import { Directive, Input } from '@angular/core';  
+import { NG_VALIDATORS, FormControl, Validator, ValidationErrors } from '@angular/forms';
+import { Directive } from '@angular/core';  
 
 @Directive({
     selector: '[float]',
@@ -17,8 +12,6 @@ import { Directive, Input } from '@angular/core';
     ]  
 })
 export class FloatValidator implements Validator {
-    @Input('float') value: Number;
-
     validate(c: FormControl): ValidationErrors | null {
         if(Number.isNaN(Number.parseFloat(c.value))) {
             return { 
