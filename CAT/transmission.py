@@ -155,8 +155,6 @@ def transmit(features, speaker, config):
 				CAT.settings.Config - all settings associated with the program
 	'''
 
-	print("SENDING A RECORDING")
-
 	request_data = {
 		"deviceId": config.get("device_id"),
 		"settingsId": config.get("settings_id"),
@@ -167,7 +165,6 @@ def transmit(features, speaker, config):
 		request_data["speakerId"] = speaker
 
 	response = requests.post("{}/recordings".format(config.get("server")), data=request_data)
-	print(response)
 
 
 def check_for_updates(config, threads_ready_to_update, settings_update_event, settings_update_lock):
