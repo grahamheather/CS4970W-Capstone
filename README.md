@@ -9,7 +9,6 @@ git clone https://github.com/grahamheather/pyAudioAnalysis.git
 pip install -e pyAudioAnalysis
 ```
 
-## For development
 Run the following command from the root directory.
 ``` pip install -e . ```
 
