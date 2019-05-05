@@ -1,4 +1,10 @@
-import sys
+import os
+import csv
+import json
+from pyAudioAnalysis import audioFeatureExtraction as afe
+from pyAudioAnalysis import audioBasicIO
+
+
 
 def extract_features(filename):
 	''' Extracts features from a file of audio data
@@ -8,29 +14,37 @@ def extract_features(filename):
 		Returns:
 			filename to extracted features
 	'''
-	extract_phonation_features(filename)
-	extract_articulation_features(filename)
+	#base name of output file
+	output_filename = "computed_features_file"
+	#base list of feature names for labelng with json
+	feature_names = 	("Zero_Crosing_Rate","Energy","Entropy_of_Energy","Spectral_Centroid","Spectral_Spread",
+	          "Spectral_Entropy","Spectral_Flux", "Spectral_Rollof", "MFCC_1", "MFCC_2", "MFCC_3",
+	          "MFCC_4", "MFCC_5", "MFCC_6", "MFCC_7", "MFCC_8", "MFCC_9", "MFCC_10", "MFCC_11", "MFCC_12", "MFCC_13",
+	          "Chroma_Vector_1", "Chroma_Vector_2", "Chroma_Vector_3", "Chroma_Vector_4", "Chroma_Vector_5",
+	          "Chroma_Vector_6", "Chroma_Vector_7", "Chroma_Vector_8", "Chroma_Vector_9", "Chroma_Vector_10",
+	          "Chroma_Vector_11", "Chroma_Vector_12", "Chroma_Deviation")
 
-	return "VERY IMPORTANT FEATURES"
 
-def extract_phonation_features(filename):
-	'''	Extracts phonation features from a file of audio data
-		Parameters:
-			filename
-		Returns:
-			filename to extracted features
-	'''
-	sys.argv = [filename, "phonation_features.txt", "static"]
-	exec(open("../../DisVoice/articulation/articulation.py").read())
+	#arguments 2 and 3 are not in use
+	#argument 7 and 8 store short term features and enable csv output respectively
+	afe.mtFeatureExtractionToFile(filename,1,1,.05,.025,output_filename,True,True,False)
 
-def extract_articulation_features(filename):
-	'''	Extracts phonation features from a file of audio data
-		Parameters:
-			filename
-		Returns:
-			filename to extracted features
-	'''
-	sys.argv = [filename, "articulation_features.txt", "static"]
-	exec(open("../../DisVoice/articulation/articulation.py").read())
+	#convert to json format
+	csv_features = open('computed_features_file_st.csv','r')
+	json_features = open('computed_features_file_st.json', 'w')
 
-extract_features("../../DisVoice/articulation/001_ddk_PCGITA.wav")
+	#add feature names as json keys
+	reader = csv.DictReader(csv_features,feature_names)
+	for row in reader:
+		json.dump(row,json_features)
+		json_features.write('\n')
+
+	#remove unnecessary files
+	os.remove(output_filename + ".csv")
+	os.remove(output_filename + ".npy")
+	os.remove(output_filename + "_st.csv")
+	os.remove(output_filename + "_st.npy")
+
+
+	#return the filename of json formatted features
+	return (output_filename + "_st.json")
