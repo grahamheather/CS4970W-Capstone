@@ -159,12 +159,13 @@ def transmit(features, speaker, config):
 		"deviceId": config.get("device_id"),
 		"settingsId": config.get("settings_id"),
 		"recordingTime": datetime.datetime.now().isoformat(),
-		"data": json.dumps(features)
+		"data": features #json.dumps(features)
 	}
 	if speaker:
 		request_data["speakerId"] = speaker
 
 	response = requests.post("{}/recordings".format(config.get("server")), data=request_data)
+	print(response)
 
 
 def check_for_updates(config, threads_ready_to_update, settings_update_event, settings_update_lock):
