@@ -30,14 +30,18 @@ def extract_features(filename):
 	afe.mtFeatureExtractionToFile(filename,1,1,.05,.025,output_filename,True,True,False)
 
 	#convert to json format
-	csv_features = open('computed_features_file_st.csv','r')
-	json_features = open('computed_features_file_st.json', 'w')
+	csv_features = open(output_filename +'_st.csv','r')
 
 	#add feature names as json keys
+	json_features = ""
 	reader = csv.DictReader(csv_features,feature_names)
+	#add rows to json string
 	for row in reader:
-		json.dump(row,json_features)
-		json_features.write('\n')
+		json_features += json.dumps(row )
+		json_features += '\n'
+
+	csv_features.close()
+
 
 	#remove unnecessary files
 	os.remove(output_filename + ".csv")
@@ -46,5 +50,6 @@ def extract_features(filename):
 	os.remove(output_filename + "_st.npy")
 
 
-	#return the filename of json formatted features
-	return (output_filename + "_st.json")
+
+	#return the string of json formatted features
+	return (json_features)
