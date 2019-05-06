@@ -3,14 +3,22 @@
     <mat-icon>mic</mat-icon>
     <span>Recording</span>
   </div>
-  <mat-list>
-    <mat-list-item *ngIf="recording.recordingTime">
-      <mat-icon mat-list-icon>today</mat-icon>
-      <span>{{formatDate(recording.recordingTime)}}</span>
-    </mat-list-item>
-    <mat-list-item *ngIf="recording.data">
-      <mat-icon mat-list-icon>storage</mat-icon>
-      <span>{{recording.data | json}}</span>
-    </mat-list-item>
-  </mat-list>
+  <div class="line-item-list">
+    <div class="line-item">
+      <mat-icon class="line-item-icon">today</mat-icon>
+      <div class="line-item-body">
+        <div class="line-item-content">
+          <span>{{formatDate(recording.recordingTime)}}</span>
+        </div>
+      </div>
+    </div>
+    <div class="line-item">
+      <mat-icon class="line-item-icon">storage</mat-icon>
+      <div class="line-item-body">
+        <div class="line-item-content">
+          <span>{{recording.data | json}}</span>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
