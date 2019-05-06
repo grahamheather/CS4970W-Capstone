@@ -28,7 +28,7 @@ app.set('views', path.join(__dirname, '../views'));
 app.set('view engine', 'pug');
 
 app.use(express.static(path.join(__dirname, '../public')));
-app.use(bodyParser.urlencoded());
+app.use(bodyParser.urlencoded({limit: '2mb'}));
 app.use(cors());
 
 app.use('/', index);
