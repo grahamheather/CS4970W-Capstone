@@ -107,7 +107,6 @@ def get_speakers(config):
 	speaker_dictionary = {}
 	for speaker in response_data:
 		speaker_data = json.loads(speaker["data"])
-		print(speaker_data)
 		if speaker_data["active"]:
 			speaker_dictionary[speaker["speakerId"]] = {
 				"mean": numpy.array(speaker_data["mean"]),
