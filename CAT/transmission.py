@@ -71,7 +71,13 @@ def register_speaker(config, audio_mean, audio_covariance):
 	'''
 
 	# convert data into a transmittable format
-	data = [audio_mean.tolist(), audio_covariance.tolist(), 1, datetime.datetime.now().isoformat()]
+	data = {
+		"mean": audio_mean.tolist(), 
+		"covariance": audio_covariance.tolist(), 
+		"count": 1, 
+		"last_seen": datetime.datetime.now().isoformat(),
+		"active": True
+	}
 
 	# register new speaker
 	request_data = {
@@ -101,12 +107,14 @@ def get_speakers(config):
 	speaker_dictionary = {}
 	for speaker in response_data:
 		speaker_data = json.loads(speaker["data"])
-		speaker_dictionary[speaker["speakerId"]] = [
-			numpy.array(speaker_data[0]),
-			numpy.array(speaker_data[1]),
-			speaker_data[2],
-			datetime.datetime.strptime(speaker_data[3], "%Y-%m-%dT%H:%M:%S.%f")
-		]
+		print(speaker_data)
+		if speaker_data["active"]:
+			speaker_dictionary[speaker["speakerId"]] = {
+				"mean": numpy.array(speaker_data["mean"]),
+				"covariance": numpy.array(speaker_data["covariance"]),
+				"count": speaker_data["count"],
+				"last_seen": datetime.datetime.strptime(speaker_data["last_seen"], "%Y-%m-%dT%H:%M:%S.%f")
+			}
 
 	return speaker_dictionary
 
@@ -120,8 +128,16 @@ def delete_speaker(config, speaker_id):
 				str - ID of the speaker to delete
 	'''
 
-	request_data = {"id": speaker_id}
-	requests.delete("{}/speakers/{}".format(config.get("server"), speaker_id), data=request_data)
+	# de-activate speaker
+	data = {
+		"active": False
+	}
+
+	request_data = {
+		"id": speaker_id,
+		"data": json.dumps(data)
+	}
+	requests.put("{}/speakers/{}".format(config.get("server"), speaker_id), data=request_data)
 
 
 def update_speaker(config, speaker_id, speaker_mean, speaker_covariance, speaker_count):
@@ -134,7 +150,13 @@ def update_speaker(config, speaker_id, speaker_mean, speaker_covariance, speaker
 	'''
 
 	# convert data into a transmittable format
-	data = [speaker_mean.tolist(), speaker_covariance.tolist(), speaker_count, datetime.datetime.now().isoformat()]
+	data = {
+		"mean": speaker_mean.tolist(), 
+		"covariance": speaker_covariance.tolist(), 
+		"count": speaker_count, 
+		"last_seen": datetime.datetime.now().isoformat(),
+		"active": True
+	}
 
 	# register new speaker
 	request_data = {

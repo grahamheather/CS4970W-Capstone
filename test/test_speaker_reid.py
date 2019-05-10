@@ -73,8 +73,10 @@ def test_identify_speaker_empty(new_speaker_mock, config):
 	assert result == "test_speaker"
 	assert len(dictionary) == 1
 	assert result in dictionary
-	assert dictionary[result][:3] == (mean, covariance, 1)
-	assert dictionary[result][3] - datetime.datetime.now() < datetime.timedelta(hours=1)
+	assert (dictionary[result]["mean"] == mean).all()
+	assert (dictionary[result]["covariance"] == covariance).all()
+	assert dictionary[result]["count"] == 1
+	assert dictionary[result]["last_seen"] - datetime.datetime.now() < datetime.timedelta(hours=1)
 
 
 # test that a speaker can be compared against previous speakers\
@@ -83,28 +85,28 @@ def test_identify_speaker_previous(update_speaker_mock, config):
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {
-		'abc': (
-			numpy.array([[1.5], [0]]), 
-			numpy.array([[1, 0], [0, 1]]), 
-			3,
-			datetime.datetime.now() - datetime.timedelta(weeks=1)
-		),
-		'xyz': (
-			numpy.array([[5], [0]]), 
-			numpy.array([[1, 0], [0, 1]]), 
-			3,
-			datetime.datetime.now() - datetime.timedelta(weeks=1)
-		)
+		'abc': {
+			"mean": numpy.array([[1.5], [0]]), 
+			"covariance": numpy.array([[1, 0], [0, 1]]), 
+			"count": 3,
+			"last_seen": datetime.datetime.now() - datetime.timedelta(weeks=1)
+		},
+		'xyz': {
+			"mean": numpy.array([[5], [0]]), 
+			"covariance": numpy.array([[1, 0], [0, 1]]), 
+			"count": 3,
+			"last_seen": datetime.datetime.now() - datetime.timedelta(weeks=1)
+		}
 	}
 	lock = multiprocessing.Lock()
 	result = speaker_reid.identify_speaker(mean, covariance, dictionary, lock, config)
 	assert len(dictionary) == 2
 	assert result == 'abc'
 	assert len(dictionary[result]) == 4
-	assert (dictionary[result][0] == numpy.array([[1.375], [0]])).all()
-	assert (dictionary[result][1] == numpy.array([[1, 0], [0, 1]])).all()
-	assert dictionary[result][2] == 4
-	assert dictionary[result][3] - datetime.datetime.now() < datetime.timedelta(hours=1)
+	assert (dictionary[result]["mean"] == numpy.array([[1.375], [0]])).all()
+	assert (dictionary[result]["covariance"] == numpy.array([[1, 0], [0, 1]])).all()
+	assert dictionary[result]["count"] == 4
+	assert dictionary[result]["last_seen"] - datetime.datetime.now() < datetime.timedelta(hours=1)
 	assert update_speaker_mock.call_args[0][0] == config
 	assert update_speaker_mock.call_args[0][1] == 'abc'
 	assert (update_speaker_mock.call_args[0][2] == numpy.array([[1.375], [0]])).all()
@@ -119,28 +121,28 @@ def test_identify_speaker_invalid_previous(update_speaker_mock, config):
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {
-		'abc': (
-			numpy.array([[1.5], [0]]), 
-			numpy.array([[1, 0], [0, 1]]), 
-			3,
-			datetime.datetime.now() - datetime.timedelta(weeks=1)
-		),
-		'xyz': (
-			numpy.array([[1.5], [0]]),
-			numpy.array([[1, 1], [1, 1]]), 
-			5,
-			datetime.datetime.now() - datetime.timedelta(weeks=1)
-		)
+		'abc': {
+			"mean": numpy.array([[1.5], [0]]), 
+			"covariance": numpy.array([[1, 0], [0, 1]]), 
+			"count": 3,
+			"last_seen": datetime.datetime.now() - datetime.timedelta(weeks=1)
+		},
+		'xyz': {
+			"mean": numpy.array([[1.5], [0]]),
+			"covariance": numpy.array([[1, 1], [1, 1]]), 
+			"count": 5,
+			"last_seen": datetime.datetime.now() - datetime.timedelta(weeks=1)
+		}
 	}
 	lock = multiprocessing.Lock()
 	result = speaker_reid.identify_speaker(mean, covariance, dictionary, lock, config)
 	assert len(dictionary) == 2
 	assert result == 'abc'
 	assert len(dictionary[result]) == 4
-	assert (dictionary[result][0] == numpy.array([[1.375], [0]])).all()
-	assert (dictionary[result][1] == numpy.array([[1, 0], [0, 1]])).all()
-	assert dictionary[result][2] == 4
-	assert dictionary[result][3] - datetime.datetime.now() < datetime.timedelta(hours=1)
+	assert (dictionary[result]["mean"] == numpy.array([[1.375], [0]])).all()
+	assert (dictionary[result]["covariance"] == numpy.array([[1, 0], [0, 1]])).all()
+	assert dictionary[result]["count"] == 4
+	assert dictionary[result]["last_seen"] - datetime.datetime.now() < datetime.timedelta(hours=1)
 	update_speaker_mock.assert_called_once()
 	assert update_speaker_mock.call_args[0][0] == config
 	assert update_speaker_mock.call_args[0][1] == 'abc'
@@ -159,28 +161,28 @@ def test_identify_speaker_new(new_speaker_mock, config):
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {
-		'abc': (
-			numpy.array([[1000000000], [0]]), 
-			numpy.array([[1, 0], [0, 1]]), 
-			3,
-			datetime.datetime.now() - datetime.timedelta(weeks=1)
-		),
-		'xyz': (
-			numpy.array([[-1000000000], [0]]),
-			numpy.array([[1, 0], [0, 1]]), 
-			5,
-			datetime.datetime.now() - datetime.timedelta(weeks=1)
-		)
+		'abc': {
+			"mean": numpy.array([[1000000000], [0]]), 
+			"covariance": numpy.array([[1, 0], [0, 1]]), 
+			"count": 3,
+			"last_seen": datetime.datetime.now() - datetime.timedelta(weeks=1)
+		},
+		'xyz': {
+			"mean": numpy.array([[-1000000000], [0]]),
+			"covariance": numpy.array([[1, 0], [0, 1]]), 
+			"count": 5,
+			"last_seen": datetime.datetime.now() - datetime.timedelta(weeks=1)
+		}
 	}
 	lock = multiprocessing.Lock()
 	result = speaker_reid.identify_speaker(mean, covariance, dictionary, lock, config)
 	assert len(dictionary) == 3
 	assert result == 'test_speaker'
 	assert len(dictionary[result]) == 4
-	assert (dictionary[result][0] == numpy.array([[1], [0]])).all()
-	assert (dictionary[result][1] == numpy.array([[1, 0], [0, 1]])).all()
-	assert dictionary[result][2] == 1
-	assert dictionary[result][3] - datetime.datetime.now() < datetime.timedelta(hours=1)
+	assert (dictionary[result]["mean"] == numpy.array([[1], [0]])).all()
+	assert (dictionary[result]["covariance"] == numpy.array([[1, 0], [0, 1]])).all()
+	assert dictionary[result]["count"] == 1
+	assert dictionary[result]["last_seen"] - datetime.datetime.now() < datetime.timedelta(hours=1)
 
 
 # test that a new speaker can be identified from previous speakers
@@ -193,28 +195,28 @@ def test_identify_speaker_invalid_new(new_speaker_mock, config):
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {
-		'abc': (
-			numpy.array([[1000000000], [0]]), 
-			numpy.array([[1, 0], [0, 1]]), 
-			3,
-			datetime.datetime.now() - datetime.timedelta(weeks=1)
-		),
-		'xyz': (
-			numpy.array([[-100000000], [0]]),
-			numpy.array([[1, 1], [1, 1]]), 
-			5,
-			datetime.datetime.now() - datetime.timedelta(weeks=1)
-		)
+		'abc': {
+			"mean": numpy.array([[1000000000], [0]]), 
+			"covariance": numpy.array([[1, 0], [0, 1]]), 
+			"count": 3,
+			"last_seen": datetime.datetime.now() - datetime.timedelta(weeks=1)
+		},
+		'xyz': {
+			"mean": numpy.array([[-100000000], [0]]),
+			"covariance": numpy.array([[1, 1], [1, 1]]), 
+			"count": 5,
+			"last_seen": datetime.datetime.now() - datetime.timedelta(weeks=1)
+		}
 	}
 	lock = multiprocessing.Lock()
 	result = speaker_reid.identify_speaker(mean, covariance, dictionary, lock, config)
 	assert len(dictionary) == 3
 	assert (not result == 'abc') and (not result == 'xyz')
 	assert len(dictionary[result]) == 4
-	assert (dictionary[result][0] == numpy.array([[1], [0]])).all()
-	assert (dictionary[result][1] == numpy.array([[1, 0], [0, 1]])).all()
-	assert dictionary[result][2] == 1
-	assert dictionary[result][3] - datetime.datetime.now() < datetime.timedelta(hours=1)
+	assert (dictionary[result]["mean"] == numpy.array([[1], [0]])).all()
+	assert (dictionary[result]["covariance"] == numpy.array([[1, 0], [0, 1]])).all()
+	assert dictionary[result]["count"] == 1
+	assert dictionary[result]["last_seen"] - datetime.datetime.now() < datetime.timedelta(hours=1)
 
 
 # test that speakers are eventually forgotten
@@ -227,30 +229,30 @@ def test_identify_speakers_forget_speakers(new_speaker_mock, delete_speaker_mock
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {
-		'abc': (
-			numpy.array([[1000000000], [0]]), 
-			numpy.array([[1, 0], [0, 1]]), 
-			3,
-			datetime.datetime.now()
-		),
-		'a1b2c3': (
-			numpy.array([[1000000000], [0]]), 
-			numpy.array([[1, 0], [0, 1]]), 
-			3,
-			datetime.datetime.now() - config.get("speaker_forget_interval")
-		),
-		'xyz': (
-			numpy.array([[-100000000], [0]]),
-			numpy.array([[1, 1], [1, 1]]), 
-			5,
-			datetime.datetime.now()
-		),
-		'x1y2z3': (
-			numpy.array([[-100000000], [0]]),
-			numpy.array([[1, 1], [1, 1]]), 
-			5,
-			datetime.datetime.now() - 2 * config.get("speaker_forget_interval")
-		)
+		'abc': {
+			"mean": numpy.array([[1000000000], [0]]), 
+			"covariance": numpy.array([[1, 0], [0, 1]]), 
+			"count": 3,
+			"last_seen": datetime.datetime.now()
+		},
+		'a1b2c3': {
+			"mean": numpy.array([[1000000000], [0]]), 
+			"covariance": numpy.array([[1, 0], [0, 1]]), 
+			"count": 3,
+			"last_seen": datetime.datetime.now() - config.get("speaker_forget_interval")
+		},
+		'xyz': {
+			"mean": numpy.array([[-100000000], [0]]),
+			"covariance": numpy.array([[1, 1], [1, 1]]), 
+			"count": 5,
+			"last_seen": datetime.datetime.now()
+		},
+		'x1y2z3': {
+			"mean": numpy.array([[-100000000], [0]]),
+			"covariance": numpy.array([[1, 1], [1, 1]]), 
+			"count": 5,
+			"last_seen": datetime.datetime.now() - 2 * config.get("speaker_forget_interval")
+		}
 	}
 	lock = multiprocessing.Lock()
 	result = speaker_reid.identify_speaker(mean, covariance, dictionary, lock, config)
@@ -283,30 +285,30 @@ def test_identify_speakers_too_many_speakers(new_speaker_mock, delete_speaker_mo
 	mean = numpy.array([[1], [0]])
 	covariance = numpy.array([[1, 0], [0, 1]])
 	dictionary = {
-		'abc': (
-			numpy.array([[1000000000], [0]]), 
-			numpy.array([[1, 0], [0, 1]]), 
-			1,
-			datetime.datetime.now()
-		),
-		'a1b2c3': (
-			numpy.array([[1000000000], [0]]), 
-			numpy.array([[1, 0], [0, 1]]), 
-			3,
-			datetime.datetime.now()
-		),
-		'xyz': (
-			numpy.array([[-100000000], [0]]),
-			numpy.array([[1, 1], [1, 1]]), 
-			1,
-			datetime.datetime.now()
-		),
-		'x1y2z3': (
-			numpy.array([[-100000000], [0]]),
-			numpy.array([[1, 1], [1, 1]]), 
-			5,
-			datetime.datetime.now()
-		)
+		'abc': {
+			"mean": numpy.array([[1000000000], [0]]), 
+			"covariance": numpy.array([[1, 0], [0, 1]]), 
+			"count": 1,
+			"last_seen": datetime.datetime.now()
+		},
+		'a1b2c3': {
+			"mean": numpy.array([[1000000000], [0]]), 
+			"covariance": numpy.array([[1, 0], [0, 1]]), 
+			"count": 3,
+			"last_seen": datetime.datetime.now()
+		},
+		'xyz': {
+			"mean": numpy.array([[-100000000], [0]]),
+			"covariance": numpy.array([[1, 1], [1, 1]]), 
+			"count": 1,
+			"last_seen": datetime.datetime.now()
+		},
+		'x1y2z3': {
+			"mean": numpy.array([[-100000000], [0]]),
+			"covariance": numpy.array([[1, 1], [1, 1]]), 
+			"count": 5,
+			"last_seen": datetime.datetime.now()
+		}
 	}
 	lock = multiprocessing.Lock()
 	result = speaker_reid.identify_speaker(mean, covariance, dictionary, lock, config_mock)

@@ -137,10 +137,10 @@ def test_get_speakers(monkeypatch):
 	# check that proper result was returned
 	assert set(result.keys()) == set(ids)
 	for i in range(len(ids)):
-		assert (result[ids[i]][0] == means[i]).all()
-		assert (result[ids[i]][1] == covariances[i]).all()
-		assert result[ids[i]][2] == 1
-		assert type(result[ids[i]][3]) == datetime.datetime
+		assert (result[ids[i]]["mean"] == means[i]).all()
+		assert (result[ids[i]]["covariance"] == covariances[i]).all()
+		assert result[ids[i]]["count"] == 1
+		assert type(result[ids[i]]["last_seen"]) == datetime.datetime
 
 	# clean up server
 	for speaker_id in ids:
@@ -165,14 +165,20 @@ def test_delete_speaker(monkeypatch):
 	
 	# check that speaker was registered
 	response = requests.get("{}/speakers/{}".format(config.get("server"), speaker_id))
-	assert response.status_code == 200	
+	assert response.status_code == 200
 
 	# call delete speaker
 	transmission.delete_speaker(config, speaker_id)
 
-	# check that speaker no longer exists
+
+	# check that speaker is not returned in get_speakers
+	speakers = transmission.get_speakers(config)
+	assert speaker_id not in speakers
+	
+	# check that speaker still exists but is marked as inactive
 	response = requests.get("{}/speakers/{}".format(config.get("server"), speaker_id))
-	assert response.status_code == 404
+	response_data = response.json()
+	assert json.loads(response_data["data"])["active"] == False
 
 	# clean up server
 	requests.delete("{}/devices/{}".format(config.get("server"), config.get("device_id")))
@@ -208,11 +214,10 @@ def test_update_speaker(monkeypatch):
 	# check that the speaker was updated
 	speakers = transmission.get_speakers(config)
 	assert speaker_id in speakers
-	print(speakers[speaker_id])
-	assert (speakers[speaker_id][0] == new_mean).all()
-	assert (speakers[speaker_id][1] == new_covariance).all()
-	assert speakers[speaker_id][2] == new_count
-	assert type(speakers[speaker_id][3]) == datetime.datetime
+	assert (speakers[speaker_id]["mean"] == new_mean).all()
+	assert (speakers[speaker_id]["covariance"] == new_covariance).all()
+	assert speakers[speaker_id]["count"] == new_count
+	assert type(speakers[speaker_id]["last_seen"]) == datetime.datetime
 
 	# clean up server
 	requests.delete("{}/speakers/{}".format(config.get("server"), speaker_id))

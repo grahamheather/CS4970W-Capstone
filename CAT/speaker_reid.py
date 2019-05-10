@@ -49,7 +49,12 @@ def add_new_speaker(audio_mean, audio_covariance, speaker_dictionary, config):
 
 	# store a new speaker
 	speaker_id = transmission.register_speaker(config, audio_mean, audio_covariance)
-	speaker_dictionary[speaker_id] = (audio_mean, audio_covariance, 1, datetime.datetime.now())
+	speaker_dictionary[speaker_id] = {
+		"mean": audio_mean, 
+		"covariance": audio_covariance, 
+		"count": 1, 
+		"last_seen": datetime.datetime.now()
+	}
 
 	return speaker_id
 
@@ -89,15 +94,15 @@ def identify_speaker(audio_mean, audio_covariance, speaker_dictionary, speaker_d
 		speaker_covariance = None
 		speaker_count = None
 		distance = None
-		for temp_speaker_id, (temp_speaker_mean, temp_speaker_covariance, temp_speaker_count, temp_speaker_last_seen) in speaker_dictionary.items():
-			temp_distance = speaker_distance(temp_speaker_mean, temp_speaker_covariance, audio_mean, audio_covariance)
+		for temp_speaker_id, speaker_data in speaker_dictionary.items():
+			temp_distance = speaker_distance(speaker_data["mean"], speaker_data["covariance"], audio_mean, audio_covariance)
 			if distance == None or (not temp_distance == None and temp_distance < distance):
 				distance = temp_distance
 				speaker_id = temp_speaker_id
-				speaker_mean = temp_speaker_mean
-				speaker_covariance = temp_speaker_covariance
-				speaker_count = temp_speaker_count
-		print(speaker_id, distance, config.get("speaker_reid_distance_threshold"))
+				speaker_mean = speaker_data["mean"]
+				speaker_covariance = speaker_data["covariance"]
+				speaker_count = speaker_data["count"]
+
 		if distance == None: # distance is invalid on all pairs
 			# add a new speaker
 			speaker_id = add_new_speaker(audio_mean, audio_covariance, speaker_dictionary, config)
@@ -106,7 +111,12 @@ def identify_speaker(audio_mean, audio_covariance, speaker_dictionary, speaker_d
 			new_speaker_count = speaker_count + 1
 			new_mean = (speaker_mean * speaker_count + audio_mean) / new_speaker_count
 			new_covariance = (speaker_covariance * speaker_count + audio_covariance) / new_speaker_count
-			speaker_dictionary[speaker_id] = (new_mean, new_covariance, new_speaker_count, datetime.datetime.now())
+			speaker_dictionary[speaker_id] = {
+				"mean": new_mean, 
+				"covariance": new_covariance, 
+				"count": new_speaker_count, 
+				"last_seen": datetime.datetime.now()
+			}
 			transmission.update_speaker(config, speaker_id, new_mean, new_covariance, new_speaker_count)
 		else:
 			# or add a new speaker
@@ -114,13 +124,13 @@ def identify_speaker(audio_mean, audio_covariance, speaker_dictionary, speaker_d
 
 		# remove not recently seen speakers
 		for speaker_to_delete in list(speaker_dictionary.keys()):
-			if datetime.datetime.now() - speaker_dictionary[speaker_to_delete][3] > config.get("speaker_forget_interval"):
+			if datetime.datetime.now() - speaker_dictionary[speaker_to_delete]["last_seen"] > config.get("speaker_forget_interval"):
 				transmission.delete_speaker(config, speaker_to_delete)
 				speaker_dictionary.pop(speaker_to_delete, None)
 
 		# if there are too many speakers, remove rarely occuring ones
 		while len(speaker_dictionary) > config.get("max_number_of_speakers"):
-			speaker_to_delete = min(speaker_dictionary, key=lambda key: speaker_dictionary.get(key)[2])
+			speaker_to_delete = min(speaker_dictionary, key=lambda key: speaker_dictionary.get(key)["count"])
 			transmission.delete_speaker(config, speaker_to_delete)
 			deleted = speaker_dictionary.pop(
 				speaker_to_delete,
