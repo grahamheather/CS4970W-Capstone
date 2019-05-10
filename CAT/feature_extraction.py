@@ -14,9 +14,9 @@ def extract_features(filename):
 		Returns:
 			filename to extracted features
 	'''
-	#base name of output file
+	# base name of output file
 	output_filename = "computed_features_file"
-	#base list of feature names for labelng with json
+	# base list of feature names for labelng with json
 	feature_names = 	("Zero_Crosing_Rate","Energy","Entropy_of_Energy","Spectral_Centroid","Spectral_Spread",
 	          "Spectral_Entropy","Spectral_Flux", "Spectral_Rollof", "MFCC_1", "MFCC_2", "MFCC_3",
 	          "MFCC_4", "MFCC_5", "MFCC_6", "MFCC_7", "MFCC_8", "MFCC_9", "MFCC_10", "MFCC_11", "MFCC_12", "MFCC_13",
@@ -25,31 +25,28 @@ def extract_features(filename):
 	          "Chroma_Vector_11", "Chroma_Vector_12", "Chroma_Deviation")
 
 
-	#arguments 2 and 3 are not in use
-	#argument 7 and 8 store short term features and enable csv output respectively
+	# arguments 2 and 3 are not in use
+	# argument 7 and 8 store short term features and enable csv output respectively
 	afe.mtFeatureExtractionToFile(filename,1,1,.05,.025,output_filename,True,True,False)
 
-	#convert to json format
+	# convert to json format
 	csv_features = open(output_filename +'_st.csv','r')
 
-	#add feature names as json keys
-	json_features = ""
+	# add feature names as json keys
+	json_features = []
 	reader = csv.DictReader(csv_features,feature_names)
-	#add rows to json string
+	# add rows to json list
 	for row in reader:
-		json_features += json.dumps(row )
-		json_features += '\n'
+		json_features.append(row)
 
 	csv_features.close()
 
-
-	#remove unnecessary files
+	# remove unnecessary files
 	os.remove(output_filename + ".csv")
 	os.remove(output_filename + ".npy")
 	os.remove(output_filename + "_st.csv")
 	os.remove(output_filename + "_st.npy")
 
 
-
-	#return the string of json formatted features
-	return (json_features)
+	# return the list of formatted features
+	return json_features
