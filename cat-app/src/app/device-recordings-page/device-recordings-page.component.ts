@@ -43,21 +43,17 @@ export class DeviceRecordingsPageComponent implements OnInit {
       ),
       shareReplay()
     );
-    // TODO: remove after debugging
-    // this.recordings$ = of([{recordingId: 'id 1', data: { test: 'test1'}, recordingTime: new Date()}, {recordingId:'id2', data: {test: 'test2'}, recordingTime: new Date()}]);
     combineLatest(this.recordings$, this.device$).subscribe(
+      () => this.loadingSubject.next(false),
       () => this.loadingSubject.next(false)
     );
   }
 
-  openRecordingSheet(recordings: Recording[], recordingId: string): void {
-    const recording = recordings.find(e => {
-      return e.recordingId === recordingId;
-    });
-    
+  openRecordingSheet(recordingId: string): void {
     const sheetRef = this.bottomSheet.open(RecordingSheetComponent, this.bottomSheetConfig);
     const recordingSheet = sheetRef.instance;
-    recordingSheet.showRecording(recording);
+
+    recordingSheet.getRecording(recordingId);
   }
 
   formatDate(date: Date): string {

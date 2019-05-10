@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Recording } from '../models/recording';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { RecordingsService } from '../services/recordings.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -12,13 +13,16 @@ export class RecordingSheetComponent implements OnInit {
   private recordingSubject: BehaviorSubject<Recording> = new BehaviorSubject<Recording>(null);
   recording$: Observable<Recording> = this.recordingSubject.asObservable();
 
-  constructor() {}
+  constructor(private recordingsService: RecordingsService) {}
 
   ngOnInit() {
   }
 
-  showRecording(rec: Recording): void {
-    this.recordingSubject.next(rec);
+  // TODO: need loading bar
+  getRecording(recordingId: string): void {
+    this.recordingsService.getRecording(recordingId).subscribe(rec => {
+      this.recordingSubject.next(rec);
+    });
   }
 
   private formatDate(date: Date): string {

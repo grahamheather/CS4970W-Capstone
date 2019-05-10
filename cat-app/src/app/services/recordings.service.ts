@@ -22,12 +22,24 @@ export class RecordingsService {
                     if(rec.recordingTime) {
                         rec.recordingTime = new Date(rec.recordingTime);
                     }
-                    if(rec.data) {
-                        rec.data = JSON.parse(rec.data);
-                    }
                     return recording;
                 });
                 return recs;
+            })
+        );
+  }
+  
+  getRecording(recordingId: string): Observable<Recording> {
+    return this.http.get<Recording>(`${this.baseUrl}/recordings/${recordingId}`)
+        .pipe(
+            map(rec => {
+                if(rec.recordingTime) {
+                    rec.recordingTime = new Date(rec.recordingTime);
+                }
+                if(rec.data) {
+                    rec.data = JSON.parse(rec.data);
+                }
+                return rec;
             })
         );
   }
