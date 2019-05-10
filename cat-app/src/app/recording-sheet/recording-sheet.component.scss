@@ -9,12 +9,16 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        padding-bottom: 1rem;
+        padding: .5rem 0;
 
         span {
             padding-left: .5rem;
             font-size: 1.5rem;
         }
+    }
+
+    .content {
+        margin: .5rem 0;
     }
 }
 

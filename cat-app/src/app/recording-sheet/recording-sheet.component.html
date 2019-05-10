@@ -1,22 +1,26 @@
-<div class="recording-sheet-root" *ngIf="recording$ | async as recording">
+<div class="recording-sheet-root">
   <div class="title">
     <mat-icon>mic</mat-icon>
     <span>Recording</span>
   </div>
-  <div class="line-item-list">
-    <div class="line-item">
-      <mat-icon class="line-item-icon">today</mat-icon>
-      <div class="line-item-body">
-        <div class="line-item-content">
-          <span>{{formatDate(recording.recordingTime)}}</span>
+  <div class="content">
+    <mat-progress-bar *ngIf="loading$ | async" class="progress-bar" color="accent" mode="indeterminate"></mat-progress-bar>
+    <mat-progress-bar *ngIf="error$ | async" class="progress-bar" color="warn" mode="determinate" value="100"></mat-progress-bar>
+    <div class="line-item-list" *ngIf="recording$ | async as recording">
+      <div class="line-item">
+        <mat-icon class="line-item-icon">today</mat-icon>
+        <div class="line-item-body">
+          <div class="line-item-content">
+            <span>{{formatDate(recording.recordingTime)}}</span>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="line-item">
-      <mat-icon class="line-item-icon">storage</mat-icon>
-      <div class="line-item-body">
-        <div class="line-item-content">
-          <span>{{recording.data | json}}</span>
+      <div class="line-item">
+        <mat-icon class="line-item-icon">storage</mat-icon>
+        <div class="line-item-body">
+          <div class="line-item-content">
+            <span>{{recording.data | json}}</span>
+          </div>
         </div>
       </div>
     </div>

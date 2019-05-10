@@ -10,7 +10,11 @@ import { RecordingsService } from '../services/recordings.service';
   styleUrls: ['./recording-sheet.component.scss']
 })
 export class RecordingSheetComponent implements OnInit {
+  private loadingSubject: BehaviorSubject<boolean> = new BehaviorSubject(true);
+  private errorSubject: BehaviorSubject<boolean> = new BehaviorSubject(false);
   private recordingSubject: BehaviorSubject<Recording> = new BehaviorSubject<Recording>(null);
+  loading$: Observable<boolean> = this.loadingSubject.asObservable();
+  error$: Observable<boolean> = this.errorSubject.asObservable();
   recording$: Observable<Recording> = this.recordingSubject.asObservable();
 
   constructor(private recordingsService: RecordingsService) {}
@@ -18,10 +22,14 @@ export class RecordingSheetComponent implements OnInit {
   ngOnInit() {
   }
 
-  // TODO: need loading bar
   getRecording(recordingId: string): void {
     this.recordingsService.getRecording(recordingId).subscribe(rec => {
       this.recordingSubject.next(rec);
+    }, () => {
+      this.loadingSubject.next(false);
+      this.errorSubject.next(true);
+    }, () => {
+      this.loadingSubject.next(false);
     });
   }
 

@@ -21,4 +21,14 @@
             }
         }
     }
+
+    .scrollable {
+        &::-webkit-scrollbar {
+            width: .75rem;
+            height: .75rem;
+        }
+        &::-webkit-scrollbar-thumb {
+            border-radius: 0 .25rem .25rem 0;
+        }
+    }
 }
