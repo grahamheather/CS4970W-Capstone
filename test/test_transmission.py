@@ -235,13 +235,15 @@ def test_transmit_speaker(monkeypatch):
 	speaker_id = transmission.register_speaker(config, mean, covariance)
 
 	# transmit data
-	transmission.transmit("some testing features", speaker_id, config)
+	transmission.transmit({"some_feature1": 0, "some_feature2": 1}, speaker_id, config)
 
 	# check that the data is on the server
 	response = requests.get("{}/devices/{}/recordings".format(config.get("server"), config.get("device_id")))	
 	response_data = response.json()
+	recording = requests.get("{}/recordings/{}".format(config.get("server"), response_data[0]["recordingId"]))
+	recording_data = recording.json()
 	assert len(response_data) == 1
-	assert response_data[0]["data"] == "some testing features"
+	assert json.loads(recording_data["data"]) == {"some_feature1": 0, "some_feature2": 1}
 	assert response_data[0]["speakerId"] == speaker_id
 
 	# clean up server
@@ -258,13 +260,15 @@ def test_transmit_no_speaker(monkeypatch):
 	transmission.register_device(config)
 
 	# transmit data
-	transmission.transmit("some testing features", None, config)
+	transmission.transmit({"some_feature1": 0, "some_feature2": 1}, None, config)
 
 	# check that the data is on the server
 	response = requests.get("{}/devices/{}/recordings".format(config.get("server"), config.get("device_id")))	
 	response_data = response.json()
+	recording = requests.get("{}/recordings/{}".format(config.get("server"), response_data[0]["recordingId"]))
+	recording_data = recording.json()
 	assert len(response_data) == 1
-	assert response_data[0]["data"] == "some testing features"
+	assert json.loads(recording_data["data"]) == {"some_feature1": 0, "some_feature2": 1}
 	assert response_data[0]["speakerId"] == None
 
 	# clean up server
