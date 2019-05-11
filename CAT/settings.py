@@ -7,6 +7,22 @@ import json
 
 FILENAME = path.join("CAT", "config.ini")
 
+name_mapping = {
+	"vadLevel": "vad_level",
+	"vadFrameMs": "vad_frame_ms",
+	"vadSampleRate": "periodic_sample_rate",
+	"minSampleLengthSecs": "min_sample_length",
+	"maxSampleLengthSecs": "max_sample_length",
+	"maxSilenceLengthSecs": "max_sample_length",
+	"stopRecordingThreshold": "min_empty_space_in_bytes",
+	"microphoneSampleRate": "rate",
+	"speakerDiarizationEnabled": "speaker_diarization",
+	"maxSpeakersPerSample": "max_speakers",
+	"speakerReidDistanceThreshold": "speaker_reid_distance_threshold",
+	"maxSpeakers": "max_number_of_speakers",
+	"daysToForgetSpeaker": "speaker_forget_interval"
+}
+
 
 class Config():
 	''' A class to contain all of the data and functions associated with
@@ -104,6 +120,20 @@ class Config():
 			if found == True:
 				break
 
+		# update calculated fields
+		self.settings["periodic_sample_frames"] = int(
+			self.settings["periodic_sample_rate"] * self.settings["milliseconds_per_second"] / self.settings["vad_frame_ms"]
+		)
+		self.settings["min_sample_frames"] = int(
+			self.settings["min_sample_length"] * self.settings["milliseconds_per_second"] / self.settings["vad_frame_ms"]
+		)
+		self.settings["max_sample_frames"] = int(
+			self.settings["max_sample_length"] * self.settings["milliseconds_per_second"] / self.settings["vad_frame_ms"]
+		)
+		self.settings["max_silence_frames"] = int(
+			self.settings["max_silence_length"] * self.settings["milliseconds_per_second"] / self.settings["vad_frame_ms"]
+		)
+
 		# update the config file on disk
 		with open(FILENAME, 'w') as self.config_file:
 			self.config.write(self.config_file)
@@ -165,7 +195,7 @@ def update_settings(config, settings_dictionary, new_settings, new_setting_id, t
 	# update setting
 	for name in new_settings:
 		try:
-			config.set(name, new_settings[name])
+			config.set(name_mapping[name], new_settings[name])
 		except ValueError:
 			pass
 
