@@ -117,7 +117,8 @@ def test_queue_audio_buffer(config):
 	record.queue_audio_buffer(audio_buffer, file_queue, config)
 
 	assert file_queue.qsize() == 1
-	filename = file_queue.get()
+	filename, settings_id = file_queue.get()
+	assert settings_id == config.get("settings_id")
 	assert len(os.listdir(get_recording_dir())) == 1
 	assert os.path.join(get_recording_dir(), os.listdir(get_recording_dir())[0]) == filename
 

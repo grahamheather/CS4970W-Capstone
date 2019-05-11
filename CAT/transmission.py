@@ -3,6 +3,7 @@ import datetime
 import uuid
 import json
 import numpy
+import copy
 
 from CAT import settings
 
@@ -188,11 +189,13 @@ def transmit(features, speaker, config):
 	response = requests.post("{}/recordings".format(config.get("server")), data=request_data)
 
 
-def check_for_updates(config, threads_ready_to_update, settings_update_event, settings_update_lock):
+def check_for_updates(config, settings_dictionary, threads_ready_to_update, settings_update_event, settings_update_lock):
 	''' Updates settings if they need to be updated
 		Parameters:
 			config
 				CAT.settings.Config - all settings associated with the program
+			settings_dictionary
+				{str: CAT.settings.Config} - all sets of settings associated with the program
 			threads_ready_to_update
 				multiprocessing.Semaphore - indicates how many threads are currently ready for a settings update
 			setting_update_event
@@ -209,8 +212,12 @@ def check_for_updates(config, threads_ready_to_update, settings_update_event, se
 
 	# update settings if necessary
 	if not server_setting_id == config.get("settings_id"):
+
+		# update active settings
 		settings.update_settings(
 			config,
+			settings_dictionary,
 			json.loads(response_data["settings"]["properties"]), server_setting_id,
 			threads_ready_to_update, settings_update_event, settings_update_lock
 		)
+		

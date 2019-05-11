@@ -56,12 +56,13 @@ def test_start_processes(get_speakers_mock, register_device_mock, monkeypatch, c
 	global analysis_process_counter
 	analysis_process_counter = multiprocessing.Value('i', 0)
 
-	def increment_analysis_process_counter(q, d, l, c, s, e, l2):
+	def increment_analysis_process_counter(q, d, l, c, cd, s, e, l2):
 		assert type(q) == multiprocessing.queues.Queue
 		assert type(d) == multiprocessing.managers.DictProxy
 		assert 'test_speaker' in d
 		assert type(l) == multiprocessing.synchronize.Lock
 		assert str(type(c)) == "<class 'multiprocessing.managers.AutoProxy[Config]'>" # type isn't registered yet
+		assert type(cd) == multiprocessing.managers.DictProxy
 		assert type(s) == multiprocessing.synchronize.Semaphore
 		assert type(e) == multiprocessing.synchronize.Event
 		assert type(l2) == multiprocessing.synchronize.Lock
@@ -99,6 +100,7 @@ def test_analyze_audio_files(transmit_mock, monkeypatch, config):
 	event = multiprocessing.Event()
 	event.set()
 	lock = multiprocessing.Lock()
+	settings_dictionary = process_manager.dict({config.get("settings_id"): config})
 
 	# replace the audio analysis function with placing the filename that would have been processed into a queue
 	# also check that unused arguments are appropriate
@@ -117,7 +119,7 @@ def test_analyze_audio_files(transmit_mock, monkeypatch, config):
 		# create each file
 		file = open(filename, 'w')
 		file.close()
-		file_queue.put(filename)
+		file_queue.put((filename, config.get("settings_id")))
 		# check that file creation was sucessful
 		assert os.path.isfile(filename)
 
@@ -126,7 +128,7 @@ def test_analyze_audio_files(transmit_mock, monkeypatch, config):
 
 	# start the audio analysis Process
 	process = multiprocessing.Process(target=scheduling.analyze_audio_files, args=(
-		file_queue, speaker_dictionary, speaker_dictionary_lock, config, semaphore, event, lock))
+		file_queue, speaker_dictionary, speaker_dictionary_lock, config, settings_dictionary, semaphore, event, lock))
 	process.start()
 
 	# give the Process sufficient time to iterate over all files
@@ -159,6 +161,7 @@ def test_analyze_audio_files_late_add(transmit_mock, monkeypatch, config):
 	event = multiprocessing.Event()
 	event.set()
 	lock = multiprocessing.Lock()
+	settings_dictionary = process_manager.dict({config.get("settings_id"): config})
 
 	# replace the audio analysis function with placing the filename that would have been processed into a queue
 	processed_files = multiprocessing.Queue()
@@ -169,7 +172,7 @@ def test_analyze_audio_files_late_add(transmit_mock, monkeypatch, config):
 
 	# start the audio analysis Process
 	process = multiprocessing.Process(target=scheduling.analyze_audio_files, args=(
-		file_queue, speaker_dictionary, speaker_dictionary_lock, config, semaphore, event, lock))
+		file_queue, speaker_dictionary, speaker_dictionary_lock, config, settings_dictionary, semaphore, event, lock))
 	process.start()
 
 	# wait a small amount of time
@@ -184,7 +187,7 @@ def test_analyze_audio_files_late_add(transmit_mock, monkeypatch, config):
 		# check that file creation was sucessful
 		assert os.path.isfile(filename)
 		# add the file to the queue
-		file_queue.put(filename)
+		file_queue.put((filename, config.get("settings_id")))
 
 	# give the Process sufficient time to iterate over all files
 	time.sleep(.5)

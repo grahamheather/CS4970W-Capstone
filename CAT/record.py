@@ -47,7 +47,7 @@ def queue_audio_buffer(audio_buffer, file_queue, config):
 		return
 
 	# add the new file to the processing queue
-	file_queue.put(filename)
+	file_queue.put((filename, config.get("settings_id")))
 
 
 def record(file_queue, config, threads_ready_to_update, settings_update_event):

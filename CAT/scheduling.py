@@ -41,7 +41,7 @@ def analyze_audio_file(filename, speaker_dictionary, speaker_dictionary_lock, co
 			os.remove(filename)
 
 
-def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock, config, threads_ready_to_update, settings_update_event, settings_update_lock):
+def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock, config, settings_dictionary, threads_ready_to_update, settings_update_event, settings_update_lock):
 	''' Analyzes files of audio extracting and processing speech
 
 		Parameters:
@@ -52,7 +52,9 @@ def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock,
 			speaker_dictionary_lock
 				a lock so that multiple processes do not try to read/write/update/delete speakers concurrently
 			config
-				CAT.settings.Config - all settings associated with the program
+				CAT.settings.Config - current settings associated with the program
+			settings_dictionary
+				{str: CAT.settings.Config} - all sets of settings associated with the program
 			threads_ready_to_update
 				multiprocessing.Semaphore - indicates how many threads are currently ready for a settings update
 			settings_update_event
@@ -69,15 +71,15 @@ def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock,
 	while True:
 
 		# block until a file is available in the queue
-		filename = file_queue.get()
+		filename, settings_id = file_queue.get()
 		
 		# process the file
-		analyze_audio_file(filename, speaker_dictionary, speaker_dictionary_lock, config)
+		analyze_audio_file(filename, speaker_dictionary, speaker_dictionary_lock, settings_dictionary[settings_id])
 
 		# delete the file
 		os.remove(filename)
 
-		transmission.check_for_updates(config, threads_ready_to_update, settings_update_event, settings_update_lock)
+		transmission.check_for_updates(config, settings_dictionary, threads_ready_to_update, settings_update_event, settings_update_lock)
 
 		# no files being processed
 		# so this is a good time for a settings update
@@ -95,12 +97,6 @@ def start_processes():
 	config_manager.start()
 	config = config_manager.Config()
 
-	# settings synchronization object
-	settings_update_event = Event()
-	settings_update_event.set()
-	threads_ready_to_update = Semaphore(config.get("num_cores"))
-	settings_update_lock = Lock()
-
 	# first make sure the device is registered on the server
 	transmission.register_device(config)
 
@@ -108,6 +104,13 @@ def start_processes():
 	process_manager = Manager()
 	speaker_dictionary = process_manager.dict(transmission.get_speakers(config))
 	speaker_dictionary_lock = Lock()
+
+	# settings configuration objects
+	settings_update_event = Event()
+	settings_update_event.set()
+	threads_ready_to_update = Semaphore(config.get("num_cores"))
+	settings_update_lock = Lock()
+	settings_dictionary = process_manager.dict({config.get("settings_id"): config})
 
 	# file synchronization objects
 	file_queue = Queue() # thread-safe FIFO queue
@@ -117,7 +120,7 @@ def start_processes():
 	recording_process = Process(target=record.record, args=(file_queue, config, threads_ready_to_update, settings_update_event))
 	recording_process.start()
 	analysis_processes = [Process(target=analyze_audio_files, args=(
-			file_queue, speaker_dictionary, speaker_dictionary_lock, config, threads_ready_to_update, settings_update_event, settings_update_lock)
+			file_queue, speaker_dictionary, speaker_dictionary_lock, config, settings_dictionary, threads_ready_to_update, settings_update_event, settings_update_lock)
 		) for _ in range(config.get("num_cores") - 1)]
 	for process in analysis_processes:
 		process.start()

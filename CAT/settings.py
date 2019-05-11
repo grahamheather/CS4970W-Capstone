@@ -125,11 +125,13 @@ class Config():
 
 
 
-def update_settings(config, new_settings, new_setting_id, threads_ready_to_update, settings_update_event, settings_update_lock):
+def update_settings(config, settings_dictionary, new_settings, new_setting_id, threads_ready_to_update, settings_update_event, settings_update_lock):
 	''' Coordinate multiple processes while updating settings
 
 		Parameters:
 			config - CAT.settings.Config, the config file to update the setting in
+			settings_dictionary
+				{str: CAT.settings.Config} - all sets of settings associated with the program
 			new_settings - dict, key-value pairs of new settings
 			new_setting_id - str, setting ID associated with these new settings
 			threads_ready_to_update
@@ -154,6 +156,12 @@ def update_settings(config, new_settings, new_setting_id, threads_ready_to_updat
 	for _ in range(config.get("num_cores")):
 		threads_ready_to_update.acquire()
 
+	# save old settings
+	new_config = Config()
+	settings_dictionary[config.get("settings_id")] = new_config
+	settings_dictionary[config.get("settings_id")].set("device_id", config.get("device_id"))
+	settings_dictionary[config.get("settings_id")].set("settings_id", config.get("settings_id"))
+
 	# update setting
 	for name in new_settings:
 		try:
@@ -163,6 +171,9 @@ def update_settings(config, new_settings, new_setting_id, threads_ready_to_updat
 
 	# update settings ID
 	config.set("settings_id", new_setting_id)
+
+	# make sure new settings are in the settings dictionary
+	settings_dictionary[config.get("settings_id")] = config
 
 	# release the other processes to continue
 	for _ in range(config.get("num_cores")):

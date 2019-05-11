@@ -143,6 +143,11 @@ def test_save_settings(monkeypatch):
 	# mock filename so it saves in a different file to examine
 	monkeypatch.setattr(settings, "FILENAME", os.path.join("CAT", "test_temp.ini"))
 
+	# add a settings ID
+	settings_dictionary = {"old_settings_id": config}
+	config.set("settings_id", "old_settings_id")
+
+
 	# parameters
 	new_settings = {
 		"milliseconds_per_second": 500,
@@ -160,7 +165,7 @@ def test_save_settings(monkeypatch):
 	lock = multiprocessing.Lock()
 
 	# call function
-	settings.update_settings(config, new_settings, "some new settings id", semaphore, event, lock)
+	settings.update_settings(config, settings_dictionary, new_settings, "some new settings id", semaphore, event, lock)
 
 	# test that the event is reset
 	assert event.is_set()
@@ -254,7 +259,7 @@ def test_save_settings_manage_processes(mock_stream, monkeypatch):
 	monkeypatch.setattr(scheduling, "analyze_audio_file", analyze_mock)
 
 	transmission_check_calls = multiprocessing.Queue()
-	def transmission_check_mock(config, threads_ready_to_update, settings_update_event, settings_update_lock):
+	def transmission_check_mock(config, settings_dictionary, threads_ready_to_update, settings_update_event, settings_update_lock):
 		transmission_check_calls.put(config.get("max_number_of_speakers"))
 	monkeypatch.setattr(scheduling.transmission, "check_for_updates", transmission_check_mock)
 
@@ -280,18 +285,19 @@ def test_save_settings_manage_processes(mock_stream, monkeypatch):
 		settings_update_lock = multiprocessing.Lock()
 		speaker_dictionary_lock = multiprocessing.Lock()
 		file_queue = multiprocessing.Queue() # thread-safe FIFO queue
+		settings_dictionary = process_manager.dict({config.get("settings_id"): config})
 
 		# start the process (just one of each)
 		recording_process = multiprocessing.Process(target=record.record, 
 			args=(file_queue, config, threads_ready_to_update, settings_update_event))
 		recording_process.start()
 		analysis_process = multiprocessing.Process(target=scheduling.analyze_audio_files, 
-			args=(file_queue, speaker_dictionary, speaker_dictionary_lock, config, threads_ready_to_update, settings_update_event, settings_update_lock))
+			args=(file_queue, speaker_dictionary, speaker_dictionary_lock, config, settings_dictionary, threads_ready_to_update, settings_update_event, settings_update_lock))
 		analysis_process.start()
 
 		# start updating a setting
 		process = multiprocessing.Process(target=settings.update_settings, 
-			args=(config, {"max_number_of_speakers": 20}, "some_new_setting_id", threads_ready_to_update, settings_update_event, settings_update_lock))
+			args=(config, settings_dictionary, {"max_number_of_speakers": 20}, "some_new_setting_id", threads_ready_to_update, settings_update_event, settings_update_lock))
 		process.start()
 
 		# give the Processes time to run

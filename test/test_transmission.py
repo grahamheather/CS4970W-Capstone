@@ -294,24 +294,35 @@ def test_check_for_updates(monkeypatch):
 
 	# register a device with the server
 	transmission.register_device(config)
+	settings_dictionary = {config.get("settings_id"): config}
 
 	# keep old settings id
 	old_settings_id = config.get("settings_id")
 
 	# simulate changing a setting on the server
-	config2.set("min_empty_space_in_bytes", 25)
-	config2.set("speaker_forget_interval", 21)
+	config2.settings["min_empty_space_in_bytes"] = 25
+	config2.settings["speaker_forget_interval"] = datetime.timedelta(days=21)
 	requests.put("{}/devices/{}/settings".format(config.get("server"), config.get("device_id")),
 		data={"settings": config2.to_string()}
 	)
 
 	# call check for updates
-	transmission.check_for_updates(config, semaphore, event, lock)
+	transmission.check_for_updates(config, settings_dictionary, semaphore, event, lock)
 
 	# check that settings were updated
 	assert config.get("min_empty_space_in_bytes") == 25
 	assert config.get("speaker_forget_interval") == datetime.timedelta(days=21)
 	assert not config.get("settings_id") == old_settings_id
+	assert len(settings_dictionary) == 2
+	
+	# check that settings dictionary was updated properly
+	assert config.get("settings_id") in settings_dictionary
+	assert old_settings_id in settings_dictionary
+	assert settings_dictionary[old_settings_id].get("min_empty_space_in_bytes") != 25
+	assert settings_dictionary[old_settings_id].get("speaker_forget_interval") != datetime.timedelta(days=21)
+	assert settings_dictionary[config.get("settings_id")].get("min_empty_space_in_bytes") == 25
+	assert settings_dictionary[config.get("settings_id")].get("speaker_forget_interval") == datetime.timedelta(days=21)
+
 
 	# clean up server
 	requests.delete("{}/devices/{}".format(config.get("server"), config.get("device_id")))
