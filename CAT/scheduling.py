@@ -69,9 +69,15 @@ def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock,
 
 	# analysis processes process files indefinitely
 	while True:
+		# no files being processed
+		# so this is a good time for a settings update
+		threads_ready_to_update.release() # signal that this thread is ready to update settings
+		settings_update_event.wait() # do not attempt to re-acquire the semaphore until the settings update is complete
 
 		# block until a file is available in the queue
 		filename, settings_id = file_queue.get()
+
+		threads_ready_to_update.acquire() # signal that this thread is no longer ready to update settings
 		
 		# process the file
 		analyze_audio_file(filename, speaker_dictionary, speaker_dictionary_lock, settings_dictionary[settings_id])
@@ -80,12 +86,6 @@ def analyze_audio_files(file_queue, speaker_dictionary, speaker_dictionary_lock,
 		os.remove(filename)
 
 		transmission.check_for_updates(config, settings_dictionary, threads_ready_to_update, settings_update_event, settings_update_lock)
-
-		# no files being processed
-		# so this is a good time for a settings update
-		threads_ready_to_update.release() # signal that this thread is ready to update settings
-		settings_update_event.wait() # do not attempt to re-acquire the semaphore until the settings update is complete
-		threads_ready_to_update.acquire() # signal that this thread is no longer ready to update settings
 
 
 def start_processes():
