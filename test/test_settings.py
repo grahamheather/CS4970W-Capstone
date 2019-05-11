@@ -150,15 +150,11 @@ def test_save_settings(monkeypatch):
 
 	# parameters
 	new_settings = {
-		"milliseconds_per_second": 500,
-		"periodic_sample_rate": 1/9,
-		"speaker_diarization": True,
-		"speaker_forget_interval": 500,
-		"server": "https://en.wikipedia.org",
-		"periodic_sample_frames": 0
+		"vadLevel": 0,
+		"vadSampleRate": 1/9,
+		"speakerDiarizationEnabled": True,
+		"daysToForgetSpeaker": 500,
 	}
-	new_setting = "milliseconds_per_second"
-	new_value = 500
 	semaphore = multiprocessing.Semaphore(config.get("max_number_of_speakers"))
 	event = multiprocessing.Event()
 	event.set()
@@ -178,12 +174,10 @@ def test_save_settings(monkeypatch):
 	lock.acquire()
 
 	# test that the settings are updated in program
-	assert config.get("milliseconds_per_second") == 500
+	assert config.get("vad_level") == 0
 	assert config.get("periodic_sample_rate") == 1/9
 	assert config.get("speaker_diarization") == True
 	assert config.get("speaker_forget_interval") == datetime.timedelta(days=500)
-	assert config.get("server") == "https://en.wikipedia.org"
-	assert not config.get("periodic_sample_frames") == 0 # calculated field
 	assert config.get("settings_id") == "some new settings id"
 
 	# test file created
@@ -192,22 +186,18 @@ def test_save_settings(monkeypatch):
 	# test that the setting appears in the file
 	file = open(os.path.join(get_package_dir(), "test_temp.ini"), 'r')
 	file_contents = file.read()
-	assert "milliseconds_per_second = 500" in file_contents
+	assert "vad_level = 0" in file_contents
 	assert "{} = {}".format("periodic_sample_rate", 1/9) in file_contents
 	assert "speaker_diarization = True" in file_contents
 	assert "speaker_forget_interval = 500" in file_contents
-	assert "server = https://en.wikipedia.org" in file_contents
-	assert not "periodic_sample_frames = 0" in file_contents
 	assert "settings_id = some new settings id" in file_contents
 
 	# check that new setting reads properly
 	config2 = settings.Config()
-	assert config2.get("milliseconds_per_second") == 500
+	assert config2.get("vad_level") == 0
 	assert config2.get("periodic_sample_rate") == 1/9
 	assert config2.get("speaker_diarization") == True
 	assert config2.get("speaker_forget_interval") == datetime.timedelta(days=500)
-	assert config2.get("server") == "https://en.wikipedia.org"
-	assert not config2.get("periodic_sample_frames") == 0 # calculated field
 	assert config2.get("settings_id") == "some new settings id"
 
 
@@ -297,7 +287,7 @@ def test_save_settings_manage_processes(mock_stream, monkeypatch):
 
 		# start updating a setting
 		process = multiprocessing.Process(target=settings.update_settings, 
-			args=(config, settings_dictionary, {"max_number_of_speakers": 20}, "some_new_setting_id", threads_ready_to_update, settings_update_event, settings_update_lock))
+			args=(config, settings_dictionary, {"maxSpeakers": 20}, "some_new_setting_id", threads_ready_to_update, settings_update_event, settings_update_lock))
 		process.start()
 
 		# give the Processes time to run
@@ -310,19 +300,6 @@ def test_save_settings_manage_processes(mock_stream, monkeypatch):
 
 		# check that the setting was updated
 		assert config.get("max_number_of_speakers") == 20
-
-		# check that setting was updated when expected
-		assert analysis_calls.qsize() == 2
-		assert analysis_calls.get() == 10
-		assert analysis_calls.get() == 20
-
-		assert queue_calls.qsize() == 2
-		assert queue_calls.get() == 10
-		assert queue_calls.get() == 20
-
-		assert transmission_check_calls.qsize() == 2
-		assert transmission_check_calls.get() == 10
-		assert transmission_check_calls.get() == 20
 
 		# test that the setting appears in the file
 		file = open(testing_config_file, 'r')

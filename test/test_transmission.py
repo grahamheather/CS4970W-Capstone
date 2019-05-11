@@ -283,7 +283,6 @@ def test_transmit_no_speaker(monkeypatch):
 def test_check_for_updates(monkeypatch):
 	# set up config
 	config = settings.Config()
-	config2 = settings.Config()
 	monkeypatch.setattr(settings, "FILENAME", "test_temp.ini")
 
 	# multiprocessing objects
@@ -300,10 +299,8 @@ def test_check_for_updates(monkeypatch):
 	old_settings_id = config.get("settings_id")
 
 	# simulate changing a setting on the server
-	config2.settings["min_empty_space_in_bytes"] = 25
-	config2.settings["speaker_forget_interval"] = datetime.timedelta(days=21)
 	requests.put("{}/devices/{}/settings".format(config.get("server"), config.get("device_id")),
-		data={"settings": config2.to_string()}
+		data={"settings": json.dumps({"stopRecordingThreshold": 25, "daysToForgetSpeaker": 21})}
 	)
 
 	# call check for updates
