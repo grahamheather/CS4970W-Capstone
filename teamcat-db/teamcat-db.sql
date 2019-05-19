@@ -7,13 +7,13 @@
 /*******************************************************************************
  * Selected metadata objects
  * -------------------------
- * Extracted at 3/12/2019 10:11:55 PM
+ * Extracted at 5/19/2019 4:40:32 PM
  ******************************************************************************/
 
 /*******************************************************************************
  * Tables
  * ------
- * Extracted at 3/12/2019 10:11:55 PM
+ * Extracted at 5/19/2019 4:40:32 PM
  ******************************************************************************/
 
 CREATE TABLE devices (
@@ -57,7 +57,7 @@ CREATE TABLE recordings (
   settings_id_text   VarChar(36) AS (INSERT ( INSERT ( INSERT ( INSERT ( HEX ( settings_id ) , 9 , 0 , '-' ) , 14 , 0 , '-' ) , 19 , 0 , '-' ) , 24 , 0 , '-' )) VIRTUAL CHARACTER SET latin1 COLLATE latin1_swedish_ci,
   recording_time     DateTime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   recording_time_iso VarChar(21) AS (DATE_FORMAT ( recording_time , '%Y-%m-%dT%TZ' )) VIRTUAL CHARACTER SET latin1 COLLATE latin1_swedish_ci,
-  json_data          VarChar(65293) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL DEFAULT '{}', 
+  json_data          MediumText CHARACTER SET latin1 COLLATE latin1_swedish_ci, 
   PRIMARY KEY (
       recording_id
   )
@@ -79,7 +79,7 @@ ALTER TABLE speakers COMMENT = '';
 /*******************************************************************************
  * Tables
  * ------
- * Extracted at 3/12/2019 10:11:56 PM
+ * Extracted at 5/19/2019 4:40:33 PM
  ******************************************************************************/
 
 ALTER TABLE devices
@@ -108,7 +108,7 @@ ALTER TABLE speakers
 /*******************************************************************************
  * Foreign Key Constraints
  * -----------------------
- * Extracted at 3/12/2019 10:11:56 PM
+ * Extracted at 5/19/2019 4:40:33 PM
  ******************************************************************************/
 
 ALTER TABLE devices ADD CONSTRAINT fk_devices_device_settings FOREIGN KEY (settings_id)
@@ -144,7 +144,7 @@ ALTER TABLE speakers ADD CONSTRAINT fk_speakers_devices FOREIGN KEY (device_id)
 /*******************************************************************************
  * Stored Procedures
  * -----------------
- * Extracted at 3/12/2019 10:11:56 PM
+ * Extracted at 5/19/2019 4:40:33 PM
  ******************************************************************************/
 
 CREATE PROCEDURE p_delete_device(device_id VarChar(36))
@@ -207,7 +207,8 @@ SELECT settings_id_text AS settings_id,
        device_id_text AS device_id, 
        created_date_iso AS created_date, 
        json_settings
-FROM device_settings;
+FROM device_settings
+ORDER BY created_date DESC;
 
 end
 /
@@ -220,9 +221,9 @@ SELECT recording_id_text AS recording_id,
        device_id_text AS device_id, 
        speaker_id_text AS speaker_id,
        settings_id_text AS settings_id, 
-       recording_time_iso AS recording_time,
-       json_data
-FROM recordings;
+       recording_time_iso AS recording_time
+FROM recordings
+ORDER BY recording_time DESC;
 
 end
 /
@@ -235,7 +236,8 @@ SELECT speaker_id_text AS speaker_id,
        device_id_text AS device_id, 
        created_date_iso AS created_date, 
        json_data
-FROM speakers;
+FROM speakers
+ORDER BY created_date DESC;
 
 end
 /
@@ -286,7 +288,8 @@ FROM
      AND created_date <= COALESCE(before_date, NOW())
 ) d
 LEFT JOIN device_settings s
-ON d.settings_id = s.settings_id;
+ON d.settings_id = s.settings_id
+ORDER BY d.created_date DESC;
 
 end
 /
@@ -312,7 +315,8 @@ FROM
      LIKE CONCAT_WS(handle, '%', '%')
 ) d
 LEFT JOIN device_settings s
-ON d.settings_id = s.settings_id;
+ON d.settings_id = s.settings_id
+ORDER BY d.created_date DESC;
 
 end
 /
@@ -326,7 +330,8 @@ SELECT settings_id_text AS settings_id,
         created_date_iso AS created_date, 
        json_settings 
 FROM device_settings s
-WHERE s.settings_id = f_generate_binary_uuid(settings_id);
+WHERE s.settings_id = f_generate_binary_uuid(settings_id)
+ORDER BY created_date DESC;
 
 end
 /
@@ -340,7 +345,8 @@ SELECT settings_id_text AS settings_id,
        created_date_iso AS created_date, 
        json_settings FROM device_settings
 WHERE created_date >= COALESCE(after_date, 0) AND
-      created_date <= COALESCE(before_date, NOW());
+      created_date <= COALESCE(before_date, NOW())
+ORDER BY created_date DESC;
 
 end
 /
@@ -354,7 +360,8 @@ SELECT settings_id_text AS settings_id,
         created_date_iso AS created_date, 
        json_settings 
 FROM device_settings s
-WHERE s.device_id = f_generate_binary_uuid(device_id);
+WHERE s.device_id = f_generate_binary_uuid(device_id)
+ORDER BY created_date DESC;
 
 end
 /
@@ -383,11 +390,11 @@ SELECT recording_id_text AS recording_id,
        device_id_text AS device_id, 
        speaker_id_text AS speaker_id,
        settings_id_text AS settings_id, 
-       recording_time_iso AS recording_time,
-       json_data
+       recording_time_iso AS recording_time
 FROM recordings r
 WHERE r.recording_time >= COALESCE(after_date, 0) AND
-      r.recording_time <= COALESCE(before_date, NOW());
+      r.recording_time <= COALESCE(before_date, NOW())
+ORDER BY recording_time DESC;
 
 end
 /
@@ -400,10 +407,10 @@ SELECT recording_id_text AS recording_id,
        device_id_text AS device_id, 
        speaker_id_text AS speaker_id,
        settings_id_text AS settings_id, 
-       recording_time_iso AS recording_time,
-       json_data
+       recording_time_iso AS recording_time
 FROM recordings r
-WHERE r.device_id = f_generate_binary_uuid(device_id);
+WHERE r.device_id = f_generate_binary_uuid(device_id)
+ORDER BY recording_time DESC;
 
 end
 /
@@ -416,10 +423,10 @@ SELECT recording_id_text AS recording_id,
        device_id_text AS device_id, 
        speaker_id_text AS speaker_id,
        settings_id_text AS settings_id, 
-       recording_time_iso AS recording_time,
-       json_data
+       recording_time_iso AS recording_time
 FROM recordings r
-WHERE r.speaker_id = f_generate_binary_uuid(speaker_id);
+WHERE r.speaker_id = f_generate_binary_uuid(speaker_id)
+ORDER BY recording_time DESC;
 
 end
 /
@@ -433,7 +440,8 @@ SELECT speaker_id_text AS speaker_id,
        created_date_iso AS created_date, 
        json_data
 FROM speakers s
-WHERE s.speaker_id = f_generate_binary_uuid(speaker_id);
+WHERE s.speaker_id = f_generate_binary_uuid(speaker_id)
+ORDER BY created_date DESC;
 
 end
 /
@@ -448,7 +456,8 @@ SELECT speaker_id_text AS speaker_id,
        json_data
 FROM speakers s
 WHERE s.created_date >= COALESCE(after_date, 0) AND
-      s.created_date <= COALESCE(before_date, NOW());
+      s.created_date <= COALESCE(before_date, NOW())
+ORDER BY created_date DESC;
 
 end
 /
@@ -462,7 +471,8 @@ SELECT speaker_id_text AS speaker_id,
        created_date_iso AS created_date, 
        json_data
 FROM speakers s
-WHERE s.device_id = f_generate_binary_uuid(device_id);
+WHERE s.device_id = f_generate_binary_uuid(device_id)
+ORDER BY created_date DESC;
 
 end
 /
@@ -494,7 +504,7 @@ WHERE d.device_id = device_id;
             
 end
 /
-CREATE PROCEDURE p_insert_recording(device_id NVarChar(36), speaker_id NVarChar(36), settings_id NVarChar(36), recording_time DateTime, json_data VarChar(65293))
+CREATE PROCEDURE p_insert_recording(device_id NVarChar(36), speaker_id NVarChar(36), settings_id NVarChar(36), recording_time DateTime, json_data MediumText)
   NO SQL
   SQL SECURITY INVOKER
 begin
@@ -591,7 +601,7 @@ end
 /*******************************************************************************
  * Stored Functions
  * ----------------
- * Extracted at 3/12/2019 10:11:57 PM
+ * Extracted at 5/19/2019 4:40:34 PM
  ******************************************************************************/
 
 CREATE FUNCTION f_binary_uuid_to_text(uuid_bin Binary(16))
